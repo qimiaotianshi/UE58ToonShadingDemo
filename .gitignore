@@ -1,0 +1,36 @@
+# ===== Unreal Engine 标准忽略规则 =====
+# 编译产物
+Binaries/
+Build/
+Intermediate/
+DerivedDataCache/
+Saved/
+.vs/
+.idea/
+*.VC.db
+*.VC.opendb
+*.opensdf
+*.sdf
+*.suo
+
+# 生成的工程文件
+*.sln
+*.slnx
+*.xcodeproj
+*.xcworkspace
+*.DotSettings.user
+
+# 编译日志 / 崩溃记录
+*.log
+replay_*.log
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# 插件编译产物（保留插件源码）
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# 自动保存的资产
+Saved/Autosaves/

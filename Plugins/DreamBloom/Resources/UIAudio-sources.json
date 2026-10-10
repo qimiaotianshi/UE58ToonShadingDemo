@@ -1,0 +1,89 @@
+{
+  "author": "Kenney",
+  "pack": "Interface Sounds 1.0",
+  "license": "CC0 1.0",
+  "source": "https://kenney.nl/assets/interface-sounds",
+  "download": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+  "archive_sha256": "f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232",
+  "processing": "Converted to 44.1 kHz mono PCM16 WAV; peak normalized to 0.6; 2 ms edge fades. Event gain is configured separately in DA.",
+  "sounds": {
+    "Action": {
+      "original": "pluck_001.ogg",
+      "file": "S_UI_Action.wav",
+      "duration": 0.10242630385487528,
+      "sha256": "16443e701492f2e9124262c83c0dc31248d91de6adbf11ac1c475002a13e6272"
+    },
+    "Map": {
+      "original": "select_001.ogg",
+      "file": "S_UI_Map.wav",
+      "duration": 0.04328798185941043,
+      "sha256": "e7434bc86668979c4421bc59a235eea3689f2c3e5b4748c55e957035cc445dfb"
+    },
+    "Sequence": {
+      "original": "select_002.ogg",
+      "file": "S_UI_Sequence.wav",
+      "duration": 0.04328798185941043,
+      "sha256": "85831ece9217c87b9e03a44efc8f7787fb6de45fbd1056fae1f39723e3780972"
+    },
+    "Mode": {
+      "original": "toggle_001.ogg",
+      "file": "S_UI_Mode.wav",
+      "duration": 0.13931972789115646,
+      "sha256": "b23ba28d2106042657bc843964574d08fd164ca2c2149bd5243f5ee821c6eb90"
+    },
+    "Start": {
+      "original": "confirmation_002.ogg",
+      "file": "S_UI_Start.wav",
+      "duration": 0.5390022675736962,
+      "sha256": "a716c447fee40dbc26eaf93027530b08f8764f166340c591ecd60fddc7f27ab1"
+    },
+    "Back": {
+      "original": "back_001.ogg",
+      "file": "S_UI_Back.wav",
+      "duration": 0.06387755102040817,
+      "sha256": "000326314a5c3dda484e6a2f3117ae2625020d173fa1f55c90b991fad10c5685"
+    },
+    "Confirm": {
+      "original": "confirmation_001.ogg",
+      "file": "S_UI_Confirm.wav",
+      "duration": 0.28984126984126984,
+      "sha256": "05cf8a24b87299575be40739ad0ce35514f8aec031c71a41ab3ab8d59dfe461f"
+    },
+    "Cancel": {
+      "original": "close_001.ogg",
+      "file": "S_UI_Cancel.wav",
+      "duration": 0.14777777777777779,
+      "sha256": "08217dc01a19a37c43750631d2a7cb50d3c5f49c84390e8314835f3b766b46ee"
+    },
+    "Unavailable": {
+      "original": "error_001.ogg",
+      "file": "S_UI_Unavailable.wav",
+      "duration": 0.1645578231292517,
+      "sha256": "cfdf90b948e8ad7e89bbdf07bfce53832cdc82eb2dc945cbd54d326bae41c94d"
+    },
+    "Pause": {
+      "original": "click_001.ogg",
+      "file": "S_UI_Pause.wav",
+      "duration": 0.10002267573696146,
+      "sha256": "96203b84f5be0c9ab8c659add1930c8e24de69cc9412a2fed267c0f15ba52a9f"
+    },
+    "Resume": {
+      "original": "open_001.ogg",
+      "file": "S_UI_Resume.wav",
+      "duration": 0.14777777777777779,
+      "sha256": "6dfaf88e87767440e5cde61fc83c4660a29368b9d24560547c39c20ad9634290"
+    },
+    "Stop": {
+      "original": "close_002.ogg",
+      "file": "S_UI_Stop.wav",
+      "duration": 0.31378684807256235,
+      "sha256": "a39c5608b04de390860beca8d9b93c2bf8a32b4ab112dfd630898ca73f7df44a"
+    },
+    "Reset": {
+      "original": "glass_001.ogg",
+      "file": "S_UI_Reset.wav",
+      "duration": 0.27843537414965985,
+      "sha256": "bd0e25c9e4781e78b6d11094f054e050f148cbba207ee3b91431a1a1d57ea555"
+    }
+  }
+}
