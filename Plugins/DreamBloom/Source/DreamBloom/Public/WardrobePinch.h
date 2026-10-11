@@ -4,6 +4,17 @@
 #include "WardrobePinch.generated.h"
 
 class UAnimSequence;
+class ULevelSequence;
+/** One clip is chosen at the start of each grab. Old single-sound DA entries migrate automatically. */
+USTRUCT(BlueprintType)
+struct DREAMBLOOM_API FWardrobePinchSounds {
+ GENERATED_BODY()
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound") TArray<TSoftObjectPtr<USoundBase>> Sounds;
+ bool SerializeFromMismatchedTag(const FPropertyTag& Tag,FStructuredArchive::FSlot Slot);
+};
+template<> struct TStructOpsTypeTraits<FWardrobePinchSounds> : TStructOpsTypeTraitsBase2<FWardrobePinchSounds> {
+ enum {WithStructuredSerializeFromMismatchedTag=true};
+};
 
 /** A temporary local deformation; helper bones must have authored skin weights. */
 USTRUCT(BlueprintType)
@@ -22,18 +33,13 @@ struct DREAMBLOOM_API FWardrobePinchRegion {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Deformation",meta=(ClampMin="0.01",ClampMax="4",UIMin="0.05",UIMax="1")) float DragSensitivity=.25f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Deformation",meta=(ClampMin="0.1",ClampMax="30")) float Frequency=6.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Deformation",meta=(ClampMin="0.1",ClampMax="2")) float DampingRatio=.8f;
- /** Scales only cheek spring recovery, independently of body/expression return time. */
+ /** Scales only cheek spring recovery, independently of body reaction return time. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0.1",ClampMax="5",DisplayName="Cheek Recovery Speed")) float CheekRecoverySpeed=2.f;
  /** Visible spring after releasing the mouse, separate from held-drag tracking. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0.1",ClampMax="15")) float ReleaseFrequency=2.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0.1",ClampMax="2")) float ReleaseDampingRatio=.45f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0.05",ClampMax="3",Units="s")) float ReactionReturnTime=.65f;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Morph") FName PullMorph;
- /** Direction in the helper bone's local space; positive drives PullMorph. */
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Morph") FVector PullAxis=FVector(1,0,0);
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Morph",meta=(ClampMin="0",ClampMax="1")) float MorphStrength=1.f;
-
- /** Body poses are selected and mixed by drag direction, including facial morph curves. */
+ /** Body poses and their authored facial curves are sampled by drag direction and force. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyLeft;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyRight;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyUp;
@@ -42,8 +48,10 @@ struct DREAMBLOOM_API FWardrobePinchRegion {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") FVector BodyUpAxis=FVector(0,0,1);
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Reaction",meta=(ClampMin="0",ClampMax="1")) float ReactionStrength=1.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Reaction",meta=(ClampMin="0.1",ClampMax="4")) float ReactionExponent=1.3f;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobeSoundEntry GrabSound;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobeSoundEntry MoveSound;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobeSoundEntry ReleaseSound;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio",meta=(ClampMin="0.05",Units="cm")) float MoveSoundDistance=.8f;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds GrabSound;
+ /** Repeats while held. Volume reaches its configured maximum at MaxDistance. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds MoveSound;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds ReleaseSound;
+ /** Plays once after release recovery, then resumes the default sequence. Uses authored bindings. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release") TSoftObjectPtr<ULevelSequence> ReleaseSequence;
 };

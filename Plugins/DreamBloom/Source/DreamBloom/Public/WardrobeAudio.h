@@ -15,16 +15,22 @@ USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobeSoundEntry {
  GENERATED_BODY()
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound") TSoftObjectPtr<USoundBase> Sound;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound",meta=(ClampMin="0.0",ClampMax="2.0")) float Volume=.65f;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound",meta=(ClampMin="0.5",ClampMax="2.0")) float Pitch=1.f;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound",meta=(ClampMin="0.0",Units="s")) float MinInterval=.08f;
+};
+/** Station transitions only require a sound asset. Legacy entries retain their asset on upgrade. */
+USTRUCT(BlueprintType)
+struct DREAMBLOOM_API FWardrobeTransitionSound {
+ GENERATED_BODY()
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sound") TSoftObjectPtr<USoundBase> Sound;
+ bool SerializeFromMismatchedTag(const FPropertyTag& Tag,FStructuredArchive::FSlot Slot);
+};
+template<> struct TStructOpsTypeTraits<FWardrobeTransitionSound> : TStructOpsTypeTraitsBase2<FWardrobeTransitionSound> {
+ enum {WithStructuredSerializeFromMismatchedTag=true};
 };
 UCLASS(BlueprintType)
 class DREAMBLOOM_API UWardrobeAudioData : public UDataAsset {
  GENERATED_BODY()
 public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Master") bool bEnabled=true;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Master",meta=(ClampMin="0.0",ClampMax="1.0")) float MasterVolume=.7f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Master",meta=(ClampMin="1",ClampMax="16")) int32 MaxSimultaneousSounds=4;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Events",meta=(DisplayName="Station Switch")) FWardrobeSoundEntry ActionSwitch;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Events") FWardrobeSoundEntry MapSelect;
@@ -46,6 +52,7 @@ public:
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Audio") void Configure(UWardrobeAudioData* Data);
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Audio") bool PlayEvent(EWardrobeUISound Event);
  bool PlayEntry(EWardrobeUISound Event,const FWardrobeSoundEntry& Entry);
+ UAudioComponent* SpawnOwnedEntry(const FWardrobeSoundEntry& Entry,bool AutoPlay=true);
  virtual void Deinitialize() override;
  int32 PlayCount=0;
  void AuditTravelAudio();
@@ -53,5 +60,4 @@ private:
  UPROPERTY(Transient) TObjectPtr<UWardrobeAudioData> Settings;
  UPROPERTY(Transient) TArray<TObjectPtr<USoundBase>> LoadedSounds;
  UPROPERTY(Transient) TArray<TObjectPtr<UAudioComponent>> ActiveSounds;
- TMap<EWardrobeUISound,double> LastPlayed;
 };

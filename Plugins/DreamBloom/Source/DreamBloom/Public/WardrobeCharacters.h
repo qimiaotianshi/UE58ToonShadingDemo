@@ -19,8 +19,6 @@ struct DREAMBLOOM_API FWardrobeCharacterOption {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Default Sequence") TSoftObjectPtr<ULevelSequence> DefaultSequence;
  /** Shared duration for fading physics out before a sequence switch and back in afterwards. Zero switches immediately. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sequence Physics Blend",meta=(ClampMin="0",Units="s")) float PhysicsFadeTime=.2f;
- /** Reset Kawaii dynamics at zero weight after the new sequence has supplied its pose. */
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Sequence Physics Blend") bool bResetPhysicsOnSequenceSwitch=true;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Physics Touch") FWardrobePhysicsTouch PhysicsTouch;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pinch") TArray<FWardrobePinchRegion> PinchRegions;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pinch") bool bDrawPinchRegions=false;
@@ -30,7 +28,7 @@ struct DREAMBLOOM_API FWardrobeCharacterOption {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Scene Binding") FName CharacterTag;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition",meta=(ClampMin="0",Units="s")) float Duration=1.5f;
  /** Play when switching into this entry. Empty falls back to DA_WardrobeAudio Station Switch. */
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition") FWardrobeSoundEntry TransitionSound;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition") FWardrobeTransitionSound TransitionSound;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition") TObjectPtr<UCurveFloat> ProgressCurve;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition") FVector DepartureOffset=FVector(0,0,60);
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Transition") FVector ArrivalOffset=FVector(0,0,60);

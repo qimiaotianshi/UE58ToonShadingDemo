@@ -11,6 +11,7 @@
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_LocalRefPose.h"
 #include "AnimGraphNode_SequencePlayer.h"
+#include "AnimGraphNode_Slot.h"
 #include "AnimGraphNode_LocalToComponentSpace.h"
 #include "AnimGraphNode_ComponentToLocalSpace.h"
 #include "AnimGraphNode_KawaiiPhysics.h"
@@ -46,7 +47,7 @@ UAnimBlueprint* UWardrobePinchEditorTools::CreatePinchTestBlueprint(USkeletalMes
  for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes)if(auto* R=Cast<UAnimGraphNode_Root>(N.Get())){Graph=G.Get();Root=R;}
  if(!Graph||!Root)return nullptr;
  using namespace WardrobePhysicsTools;
- auto* Ref=Add<UAnimGraphNode_LocalRefPose>(Graph,-800);auto* ToComponent=Add<UAnimGraphNode_LocalToComponentSpace>(Graph,-600);if(!Link(Ref,ToComponent))return nullptr;
+ auto* Ref=Add<UAnimGraphNode_LocalRefPose>(Graph,-1000);auto* Slot=Add<UAnimGraphNode_Slot>(Graph,-800);Slot->Node.SlotName=TEXT("DefaultSlot");auto* ToComponent=Add<UAnimGraphNode_LocalToComponentSpace>(Graph,-600);if(!Link(Ref,Slot)||!Link(Slot,ToComponent))return nullptr;
  UEdGraphNode* Previous=ToComponent;
  for(int32 I=0;I<Bones.Num();I++){auto* N=Add<UAnimGraphNode_WardrobePinch>(Graph,-400+I*200);N->Node.BoneToModify.BoneName=Bones[I];N->Node.bReactionBone=!Bones[I].ToString().StartsWith(TEXT("DB_Pinch_"));if(!Link(Previous,N))return nullptr;Previous=N;}
  auto* ToLocal=Add<UAnimGraphNode_ComponentToLocalSpace>(Graph,Bones.Num()*200);Root->NodePosX=Bones.Num()*200+200;
@@ -70,17 +71,5 @@ bool UWardrobePinchEditorTools::SetPinchBaseAnimation(UAnimBlueprint* BP,UAnimSe
  }
 #endif
  return false;
-}
-
-bool UWardrobePinchEditorTools::SetPinchExpressionCurve(UAnimSequence* Clip,FName Curve,const TArray<float>& Times,const TArray<float>& Values){
-#if WITH_EDITOR
- if(!Clip||Times.Num()!=Values.Num()||Times.IsEmpty())return false;
- auto& Controller=Clip->GetController();const FAnimationCurveIdentifier Id(Curve,ERawCurveTrackTypes::RCT_Float);
- if(!Clip->HasCurveData(Curve,true))Controller.AddCurve(Id,4,false);
- TArray<FRichCurveKey> Keys;for(int32 I=0;I<Times.Num();I++){FRichCurveKey K(Times[I],Values[I]);K.InterpMode=RCIM_Linear;Keys.Add(K);}
- return Controller.SetCurveKeys(Id,Keys,false);
-#else
- return false;
-#endif
 }
 

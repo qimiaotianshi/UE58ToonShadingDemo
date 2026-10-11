@@ -285,7 +285,7 @@ void UWardrobeMenu::ChangeMode(int32 I){
  Showcase=StationController->GetActiveCharacter();
  const auto& Sound=Data->CharacterData->Characters[Mode].TransitionSound;
  if(Sound.Sound.IsNull())PlayUISound(EWardrobeUISound::ActionSwitch);
- else if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->PlayEntry(EWardrobeUISound::ActionSwitch,Sound);
+ else if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){FWardrobeSoundEntry Entry;Entry.Sound=Sound.Sound;Audio->PlayEntry(EWardrobeUISound::ActionSwitch,Entry);}
  Message=ModeLabel(Mode);NoticeTime=2.5f;RestoreMenuFocus();
 }
 void UWardrobeMenu::OpenChoice(int32 I){SelectChoice(I);if(SelectedChoice()==I)StartGame();}

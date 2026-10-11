@@ -65,24 +65,33 @@ bool AWardrobeShowcase::TriggerInteraction(int32 RegionIndex){
  float Pick=FMath::FRand()*Total;int32 Slot=Choices.Num()-1;
  for(int32 I=0;I<Choices.Num();I++){Pick-=R.Reactions[Choices[I]].Weight;if(Pick<=0){Slot=I;break;}}
  const auto& Reaction=R.Reactions[Choices[Slot]];
- FMovieSceneSequencePlaybackSettings Settings;Settings.LoopCount.Value=0;Settings.bPauseAtEnd=true;Settings.PlayRate=FMath::Max(.01f,Reaction.PlayRate);
+ if(!PrepareInteractionSequence(Sequences[Slot],RegionIndex,Reaction.PlayRate,Reaction.CharacterBindingTag))return false;
+ LastReaction.Add(RegionIndex,Choices[Slot]);return true;
+}
+bool AWardrobeShowcase::PrepareInteractionSequence(ULevelSequence* Sequence,int32 RegionIndex,float PlayRate,FName BindingTag){
+ const auto* Profile=GetInteractionProfile();
+ if(!bInteractionEnabled||IsInteracting()||!Profile||!Sequence||!Sequence->GetMovieScene())return false;
+ const auto Range=Sequence->GetMovieScene()->GetPlaybackRange();
+ if(!Range.HasLowerBound()||!Range.HasUpperBound()||Range.IsEmpty()||Range.GetUpperBoundValue()<=Range.GetLowerBoundValue())return false;
+ FMovieSceneSequencePlaybackSettings Settings;Settings.LoopCount.Value=0;Settings.bPauseAtEnd=true;Settings.PlayRate=FMath::Max(.01f,PlayRate);
  Settings.FinishCompletionStateOverride=EMovieSceneCompletionModeOverride::ForceRestoreState;
  ALevelSequenceActor* Actor=nullptr;
- auto* Player=ULevelSequencePlayer::CreateLevelSequencePlayer(this,Sequences[Slot],Settings,Actor);
+ auto* Player=ULevelSequencePlayer::CreateLevelSequencePlayer(this,Sequence,Settings,Actor);
  if(!Player||!Actor){if(Actor)Actor->Destroy();return false;}
- if(!Reaction.CharacterBindingTag.IsNone()){
-  if(Actor->FindNamedBindings(Reaction.CharacterBindingTag).IsEmpty()){
+ if(!BindingTag.IsNone()){
+  if(Actor->FindNamedBindings(BindingTag).IsEmpty()){
    CharacterMessage=FText::FromString(TEXT("Sequence 中未找到指定的人物绑定标签"));Actor->Destroy();return false;
   }
-  Actor->SetBindingByTag(Reaction.CharacterBindingTag,{this},false);
+  Actor->SetBindingByTag(BindingTag,{this},false);
  }
  InteractionPlayer=Player;InteractionSequenceActor=Actor;
- InteractionAge=0;ActiveInteraction=RegionIndex;LastReaction.Add(RegionIndex,Choices[Slot]);++InteractionPlayCount;
+ InteractionAge=0;ActiveInteraction=RegionIndex;++InteractionPlayCount;
  PendingSequenceSwitch=1;ClearPinch();StopPhysicsTouch();
- FadeSequencePhysics(0,Person.PhysicsFadeTime);
+ FadeSequencePhysics(0,Profile->PhysicsFadeTime);
  if(PhysicsBlendDuration<=0)StartPreparedInteraction();
- UE_LOG(LogTemp,Display,TEXT("WARDROBE_INTERACTION_SEQUENCE region=%d reaction=%d sequence=%s tag=%s"),RegionIndex,Choices[Slot],*Sequences[Slot]->GetPathName(),*Reaction.CharacterBindingTag.ToString());return true;
+ return true;
 }
+
 void AWardrobeShowcase::StartPreparedInteraction(){
  if(PendingSequenceSwitch!=1||!IsValid(InteractionPlayer))return;
  PendingSequenceSwitch=0;
@@ -109,7 +118,7 @@ void AWardrobeShowcase::CancelInteraction(bool RestoreIdle){
  const bool WasInteracting=IsInteracting();
  const bool HadPose=bInteractionStarted;
  PendingSequenceSwitch=0;bInteractionStarted=false;
- FadeSequencePhysics(1,0);bResetSequenceDynamics=false;
+ FadeSequencePhysics(1,0);
  // Stop and restore even when changing character, so old evaluation cannot overwrite the new mesh.
  if(IsValid(InteractionPlayer)){InteractionPlayer->Stop();InteractionPlayer->RestoreState();}
  if(IsValid(InteractionSequenceActor))InteractionSequenceActor->Destroy();
@@ -144,5 +153,5 @@ void AWardrobeShowcase::TickInteraction(float Dt){
  }
  if(!IsInteracting()||PendingSequenceSwitch!=0)return;
  InteractionAge+=Dt;
- if(!IsValid(InteractionPlayer)||!InteractionPlayer->IsPlaying()||InteractionAge>=FMath::Max(1.f,P.MaxInteractionDuration))CancelInteraction(true);
+ if(!IsValid(InteractionPlayer)||!InteractionPlayer->IsPlaying()||(ActiveInteraction>=0&&InteractionAge>=FMath::Max(1.f,P.MaxInteractionDuration)))CancelInteraction(true);
 }

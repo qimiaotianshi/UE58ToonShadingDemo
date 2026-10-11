@@ -98,12 +98,12 @@ bool FWardrobeCurveTest::RunTest(const FString& Parameters){
  TestEqual(TEXT("Normalize curve end"),UWardrobeStationController::EvaluateProgress(Curve,1),1.f);
  auto* Constant=NewObject<UCurveFloat>();Constant->FloatCurve.AddKey(0,1);Constant->FloatCurve.AddKey(1,1);
  TestEqual(TEXT("Constant curve falls back safely"),UWardrobeStationController::EvaluateProgress(Constant,.5),.5f);
- TestNull(TEXT("Voice settings removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("Voices")));
- TestNull(TEXT("DA mesh swapping removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("Mesh")));
- TestNull(TEXT("Destination sequence list removed"),UWardrobeMenuData::StaticClass()->FindPropertyByName(TEXT("Sequences")));
- TestNull(TEXT("Legacy destination sequence removed"),UWardrobeMenuData::StaticClass()->FindPropertyByName(TEXT("Sequence")));
- TestNull(TEXT("Sequence selection function removed"),UWardrobeMenu::StaticClass()->FindFunctionByName(TEXT("SetSequenceMode")));
- TestNull(TEXT("Sequence selection sound removed"),UWardrobeAudioData::StaticClass()->FindPropertyByName(TEXT("SequenceSelect")));
+ TestFalse(TEXT("Voice settings removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("Voices"))!=nullptr);
+ TestFalse(TEXT("DA mesh swapping removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("Mesh"))!=nullptr);
+ TestFalse(TEXT("Destination sequence list removed"),UWardrobeMenuData::StaticClass()->FindPropertyByName(TEXT("Sequences"))!=nullptr);
+ TestFalse(TEXT("Legacy destination sequence removed"),UWardrobeMenuData::StaticClass()->FindPropertyByName(TEXT("Sequence"))!=nullptr);
+ TestFalse(TEXT("Sequence selection function removed"),UWardrobeMenu::StaticClass()->FindFunctionByName(TEXT("SetSequenceMode"))!=nullptr);
+ TestFalse(TEXT("Sequence selection sound removed"),UWardrobeAudioData::StaticClass()->FindPropertyByName(TEXT("SequenceSelect"))!=nullptr);
  TestNotNull(TEXT("Interaction sequences retained"),FWardrobeReaction::StaticStruct()->FindPropertyByName(TEXT("Sequence")));
  return true;
 }

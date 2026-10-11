@@ -10,12 +10,71 @@
 #include "Animation/Skeleton.h"
 #include "Animation/MorphTarget.h"
 #include "Engine/SkeletalMesh.h"
+#include "Components/AudioComponent.h"
+#include "LevelSequence.h"
+#include "UObject/PropertyTag.h"
+
+bool FWardrobePinchSounds::SerializeFromMismatchedTag(const FPropertyTag& Tag,FStructuredArchive::FSlot Slot){
+ if(Tag.Type==NAME_StructProperty&&Tag.GetType().GetParameterName(0)==FWardrobeSoundEntry::StaticStruct()->GetFName()){
+  FWardrobeSoundEntry Old;FWardrobeSoundEntry::StaticStruct()->SerializeItem(Slot,&Old,nullptr);
+  Sounds.Reset();if(!Old.Sound.IsNull())Sounds.Add(Old.Sound);return true;
+ }
+ return false;
+}
+FWardrobeSoundEntry AWardrobeShowcase::ChoosePinchSound(const FWardrobePinchSounds& Sounds,FName Bone,const TCHAR* Event){
+ TArray<TSoftObjectPtr<USoundBase>> Choices;
+ for(const auto& Sound:Sounds.Sounds)if(!Sound.IsNull())Choices.AddUnique(Sound);
+ const FString Key=Bone.ToString()+TEXT(":")+Event;
+ if(Choices.Num()>1)if(const auto* Last=LastPinchSoundChoices.Find(Key))Choices.RemoveAll([&](const auto& S){return S.ToSoftObjectPath()==*Last;});
+ FWardrobeSoundEntry Entry;
+ if(!Choices.IsEmpty()){Entry.Sound=Choices[FMath::RandRange(0,Choices.Num()-1)];LastPinchSoundChoices.Add(Key,Entry.Sound.ToSoftObjectPath());}
+ return Entry;
+}
 
 FVector AWardrobeShowcase::GetPinchOffset(FName Bone) const{
  FVector Result=FVector::ZeroVector;for(const auto& State:PinchStates)if(State.Bone==Bone)Result+=State.Position;return Result;
 }
 void AWardrobeShowcase::PlayPinchSound(const FWardrobeSoundEntry& Entry,EWardrobeUISound Event){
  if(GetGameInstance())if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->PlayEntry(Event,Entry);
+}
+void AWardrobeShowcase::StopPinchAudio(){
+ if(IsValid(PinchMoveAudio)){PinchMoveAudio->OnAudioFinished.RemoveDynamic(this,&AWardrobeShowcase::RepeatPinchMoveSound);PinchMoveAudio->Stop();PinchMoveAudio->DestroyComponent();}
+ if(IsValid(PinchGrabAudio)){PinchGrabAudio->OnAudioFinished.RemoveDynamic(this,&AWardrobeShowcase::FinishPinchGrabSound);PinchGrabAudio->Stop();PinchGrabAudio->DestroyComponent();}
+ PinchGrabAudio=nullptr;PinchMoveAudio=nullptr;PinchMoveVolume=0;PinchMotionAge=1.f;PinchLastMouseDelta=FVector::ZeroVector;
+ bPinchGrabFinished=true;bPinchMoveStarted=false;bPinchMovePaused=false;
+}
+void AWardrobeShowcase::StartPinchAudio(const FWardrobePinchRegion& Region){
+ StopPinchAudio();
+ const auto Grab=ChoosePinchSound(Region.GrabSound,Region.Bone,TEXT("Grab"));
+ const auto Move=ChoosePinchSound(Region.MoveSound,Region.Bone,TEXT("Move"));
+ PinchRoundReleaseSound=ChoosePinchSound(Region.ReleaseSound,Region.Bone,TEXT("Release")).Sound;
+ if(GetGameInstance())if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){
+  PinchGrabAudio=Audio->SpawnOwnedEntry(Grab);PinchMoveAudio=Audio->SpawnOwnedEntry(Move,false);
+  bPinchGrabFinished=!IsValid(PinchGrabAudio)||!PinchGrabAudio->IsPlaying();
+  if(IsValid(PinchGrabAudio))PinchGrabAudio->OnAudioFinished.AddDynamic(this,&AWardrobeShowcase::FinishPinchGrabSound);
+  if(IsValid(PinchMoveAudio)){PinchMoveAudio->SetVolumeMultiplier(0);PinchMoveAudio->OnAudioFinished.AddDynamic(this,&AWardrobeShowcase::RepeatPinchMoveSound);}
+ }
+}
+void AWardrobeShowcase::RepeatPinchMoveSound(){
+ bPinchMoveStarted=false;bPinchMovePaused=false;
+ if(ActivePinch!=INDEX_NONE&&bInteractionEnabled&&!IsInteracting()&&bPinchGrabFinished&&PinchMotionAge<.08f&&IsValid(PinchMoveAudio)){PinchMoveAudio->Play();bPinchMoveStarted=true;}
+}
+void AWardrobeShowcase::FinishPinchGrabSound(){bPinchGrabFinished=true;}
+void AWardrobeShowcase::TickPinchAudio(float Dt){
+ const auto* P=GetInteractionProfile();
+ if(!P||!P->PinchRegions.IsValidIndex(ActivePinch)||!PinchStates.IsValidIndex(ActivePinch))return;
+ PinchMotionAge+=FMath::Max(0.f,Dt);
+ const bool Moving=PinchMotionAge<.08f;
+ const bool Audible=Moving&&bPinchGrabFinished;
+ const float Force=FMath::Clamp(float(PinchStates[ActivePinch].Position.Size())/FMath::Max(.1f,P->PinchRegions[ActivePinch].MaxDistance),0.f,1.f);
+ PinchMoveVolume=FMath::Lerp(PinchMoveVolume,Audible?FMath::Lerp(.15f,1.f,Force):0.f,1.f-FMath::Exp(-30.f*FMath::Max(0.f,Dt)));
+ if(IsValid(PinchMoveAudio)){
+  PinchMoveAudio->SetVolumeMultiplier(PinchMoveVolume);
+  if(Audible){
+   if(bPinchMovePaused){PinchMoveAudio->SetPaused(false);bPinchMovePaused=false;}
+   else if(!bPinchMoveStarted){PinchMoveAudio->Play();bPinchMoveStarted=true;}
+  }else if(bPinchMoveStarted&&!bPinchMovePaused&&PinchMoveVolume<.01f){PinchMoveAudio->SetPaused(true);bPinchMovePaused=true;}
+ }
 }
 bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Direction){
  const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||!Profile||!Character||Direction.IsNearlyZero())return false;
@@ -34,14 +93,16 @@ bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Directio
   if(FWardrobeKawaiiClickForce::RaySphere(Origin,Ray,Center,FMath::Max(.1f,Region.HitRadius)*Character->GetComponentTransform().GetMaximumAxisScale(),Distance)&&Distance<Best){Selected=I;Best=Distance;}
  }
  if(Selected==INDEX_NONE)return false;
+ PendingPinchReleaseSequence=nullptr;
+ // A second grab replaces any held voice and repetition.
+ StopPinchAudio();
  if(PinchStates.Num()!=Profile->PinchRegions.Num()){ClearPinch();PinchStates.SetNum(Profile->PinchRegions.Num());}
  const auto& Region=Profile->PinchRegions[Selected];auto& State=PinchStates[Selected];
- State.Bone=Region.Bone;State.PullMorph=Region.PullMorph;State.Target=State.Position;State.bReturning=false;
+ State.Bone=Region.Bone;State.Target=State.Position;State.bReturning=false;
  ActivePinch=Selected;PinchPlanePoint=Origin+Ray*Best;PinchPlaneNormal=Ray;PinchStartRotation=Character->GetSocketQuaternion(Region.Bone);
  State.StartComponentRotation=Character->GetComponentQuat().Inverse()*PinchStartRotation;
  PinchGrabOffset=PinchStartRotation.RotateVector(State.Position);
- LastPinchSoundTarget=State.Target;
- StopPhysicsTouch();PlayPinchSound(Region.GrabSound,EWardrobeUISound::PinchGrab);return true;
+ StopPhysicsTouch();StartPinchAudio(Region);return true;
 }
 void AWardrobeShowcase::UpdatePinch(const FVector& Origin,const FVector& Direction){
  const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||!Profile||!Profile->PinchRegions.IsValidIndex(ActivePinch)||!PinchStates.IsValidIndex(ActivePinch)){ReleasePinch();return;}
@@ -50,21 +111,27 @@ void AWardrobeShowcase::UpdatePinch(const FVector& Origin,const FVector& Directi
  const double Distance=FVector::DotProduct(PinchPlanePoint-Origin,PinchPlaneNormal)/Dot;if(Distance<=0)return;
  auto& State=PinchStates[ActivePinch];
  const FVector MouseDelta=Origin+Direction*Distance-PinchPlanePoint;
+ // Measure pointer movement before clamping stretch, so motion at maximum pull still sounds.
+ if(FVector::DistSquared(MouseDelta,PinchLastMouseDelta)>=FMath::Square(.03f)){PinchMotionAge=0;PinchLastMouseDelta=MouseDelta;}
  const FVector NewOffset=PinchStartRotation.UnrotateVector(MouseDelta)*Region.AxisScale*FMath::Clamp(Region.DragSensitivity,.01f,4.f);
  State.Target=(PinchStartRotation.UnrotateVector(PinchGrabOffset)+NewOffset).GetClampedToMaxSize(FMath::Max(.1f,Region.MaxDistance));
- if(FVector::Distance(State.Target,LastPinchSoundTarget)>=FMath::Max(.05f,Region.MoveSoundDistance)){
-  LastPinchSoundTarget=State.Target;PlayPinchSound(Region.MoveSound,EWardrobeUISound::PinchMove);
- }
 }
 void AWardrobeShowcase::ReleasePinch(){
  if(ActivePinch==INDEX_NONE)return;
  const auto* Profile=GetInteractionProfile();
+ StopPinchAudio();
  for(auto& State:PinchStates){State.ReleaseReaction=State.Position;State.ReturnAge=0;State.bReturning=true;}
- if(Profile&&Profile->PinchRegions.IsValidIndex(ActivePinch))PlayPinchSound(Profile->PinchRegions[ActivePinch].ReleaseSound,EWardrobeUISound::PinchRelease);
+ if(Profile&&Profile->PinchRegions.IsValidIndex(ActivePinch)){
+  const auto& R=Profile->PinchRegions[ActivePinch];FWardrobeSoundEntry Release;Release.Sound=PinchRoundReleaseSound;PlayPinchSound(Release,EWardrobeUISound::PinchRelease);PinchRoundReleaseSound.Reset();
+  PendingPinchReleaseSequence=R.ReleaseSequence.LoadSynchronous();PinchReleaseAge=0;
+  // Let the authored body return and the cheek spring settle before the aftercare clip takes over.
+  const float Omega=2*PI*FMath::Max(.1f,R.ReleaseFrequency*R.CheekRecoverySpeed);
+  PinchReleaseDelay=FMath::Max(R.ReactionReturnTime,FMath::Clamp(4.6f/(Omega*FMath::Max(.1f,R.ReleaseDampingRatio)),.1f,3.f));
+ }
  ActivePinch=INDEX_NONE;for(auto& State:PinchStates)State.Target=FVector::ZeroVector;
 }
 void AWardrobeShowcase::ClearPinch(){
- if(IsValid(Character))for(const auto& State:PinchStates){if(!State.PullMorph.IsNone())Character->SetMorphTarget(State.PullMorph,0);}
+ StopPinchAudio();PendingPinchReleaseSequence=nullptr;PinchRoundReleaseSound.Reset();
  for(FName Name:PinchDrivenCurves)if(IsValid(Character))Character->SetMorphTarget(Name,0);PinchDrivenCurves.Reset();
  ActivePinch=INDEX_NONE;PinchStates.Reset();
 }
@@ -81,9 +148,8 @@ void AWardrobeShowcase::TickPinch(float Dt){
   while(Remaining>SMALL_NUMBER){const float Step=FMath::Min(Remaining,1.f/480.f);State.Velocity+=((State.Target-State.Position)*Omega*Omega-2*Damping*Omega*State.Velocity)*Step;State.Position+=State.Velocity*Step;Remaining-=Step;}
   State.Position=State.Position.GetClampedToMaxSize(FMath::Max(.1f,Region.MaxDistance)*1.15f);
   if(State.Target.IsNearlyZero(.001f)&&State.Position.IsNearlyZero(.001f)&&State.Velocity.IsNearlyZero(.01f)){State.Position=FVector::ZeroVector;State.Velocity=FVector::ZeroVector;}
-  const float Amount=FVector::DotProduct(State.Position,Region.PullAxis.GetSafeNormal())/FMath::Max(.1f,Region.MaxDistance)*FMath::Clamp(Region.MorphStrength,0.f,1.f);
-  if(!Region.PullMorph.IsNone())Character->SetMorphTarget(Region.PullMorph,FMath::Clamp(Amount,0.f,1.f));
  }
+ TickPinchAudio(Dt);
  TMap<FName,float> CurveValues;
  for(int32 I=0;I<PinchStates.Num();I++){
   const auto& Region=Profile->PinchRegions[I];const auto& State=PinchStates[I];
@@ -108,6 +174,10 @@ void AWardrobeShowcase::TickPinch(float Dt){
  for(FName Name:PinchDrivenCurves)if(!CurveValues.Contains(Name))Character->SetMorphTarget(Name,0);
  PinchDrivenCurves.Reset();
  for(const auto& Pair:CurveValues){Character->SetMorphTarget(Pair.Key,FMath::Clamp(Pair.Value,-1.f,1.f));PinchDrivenCurves.Add(Pair.Key);}
+ if(PendingPinchReleaseSequence&&ActivePinch==INDEX_NONE){
+  PinchReleaseAge+=FMath::Max(0.f,Dt);
+  if(PinchReleaseAge>=PinchReleaseDelay){auto* Sequence=PendingPinchReleaseSequence.Get();PendingPinchReleaseSequence=nullptr;PrepareInteractionSequence(Sequence,-2);}
+ }
  if(Profile->bDrawPinchRegions)for(const auto& Region:Profile->PinchRegions){if(!Region.bEnabled)continue;const FName Anchor=Region.AnchorBone.IsNone()?Region.Bone:Region.AnchorBone;if(Character->DoesSocketExist(Anchor)){const FTransform TM=Character->GetSocketTransform(Anchor);DrawDebugSphere(GetWorld(),TM.TransformPosition(Region.Offset),Region.HitRadius*Character->GetComponentTransform().GetMaximumAxisScale(),16,FColor::Green,false,0);}}
 }
 

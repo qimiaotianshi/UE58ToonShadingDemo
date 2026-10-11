@@ -11,6 +11,4 @@ public:
  static UAnimBlueprint* CreatePinchTestBlueprint(USkeletalMesh* Mesh,const TArray<FName>& Bones,const FString& PackagePath);
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
  static bool SetPinchBaseAnimation(UAnimBlueprint* Blueprint,UAnimSequence* Animation);
- UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
- static bool SetPinchExpressionCurve(UAnimSequence* Animation,FName Curve,const TArray<float>& Times,const TArray<float>& Values);
 };
