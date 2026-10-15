@@ -4,7 +4,6 @@
 #include "WardrobePinch.generated.h"
 
 class UAnimSequence;
-class ULevelSequence;
 /** One clip is chosen at the start of each grab. Old single-sound DA entries migrate automatically. */
 USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobePinchSounds {
@@ -52,6 +51,7 @@ struct DREAMBLOOM_API FWardrobePinchRegion {
  /** Repeats while held. Volume reaches its configured maximum at MaxDistance. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds MoveSound;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds ReleaseSound;
- /** Plays once after release recovery, then resumes the default sequence. Uses authored bindings. */
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release") TSoftObjectPtr<ULevelSequence> ReleaseSequence;
+ /** Blends directly from the held pose, then back to the continuously running default pose. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release") TSoftObjectPtr<UAnimSequence> ReleaseAnimation;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0",ClampMax="3",Units="s")) float ReleaseBlendTime=.25f;
 };

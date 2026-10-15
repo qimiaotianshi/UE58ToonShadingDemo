@@ -60,8 +60,8 @@ bool FDefaultSequenceTest::RunTest(const FString&){
  TestTrue(TEXT("Queue before disabling"),A->TriggerInteraction(0));A->SetInteractionEnabled(false);A->TickSequencePhysicsBlend(1);TestFalse(TEXT("No queued restart after disable"),A->IsInteracting()||A->IsDefaultSequencePlaying());
  A->SetInteractionEnabled(false);P.DefaultSequence=nullptr;A->SetInteractionEnabled(true);TestFalse(TEXT("Empty default keeps existing blueprint setup"),A->IsDefaultSequencePlaying());TestTrue(TEXT("No sequence does not force animation mode"),A->Character->GetAnimationMode()==EAnimationMode::AnimationBlueprint);
  P.DefaultSequence=PreviewSequence(TEXT("Person"),100);P.DefaultSequence.Get()->BindPossessableObject(P.DefaultSequence.Get()->GetMovieScene()->GetPossessable(0).GetGuid(),*A,W);
- TestFalse(TEXT("Default binding setting removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("DefaultCharacterBindingTag"))!=nullptr);
- TestFalse(TEXT("Default rate setting removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("DefaultSequencePlayRate"))!=nullptr);
+ TestNull(TEXT("Default binding setting removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("DefaultCharacterBindingTag")));
+ TestNull(TEXT("Default rate setting removed"),FWardrobeCharacterOption::StaticStruct()->FindPropertyByName(TEXT("DefaultSequencePlayRate")));
  A->SetInteractionEnabled(true);A->EndPlay(EEndPlayReason::RemovedFromWorld);TestFalse(TEXT("EndPlay stops default"),A->IsDefaultSequencePlaying());TestFalse(TEXT("EndPlay cannot restart"),A->StartDefaultSequence());
  GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
 }

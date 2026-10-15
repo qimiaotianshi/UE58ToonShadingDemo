@@ -11,4 +11,6 @@ public:
  static UAnimBlueprint* CreatePinchTestBlueprint(USkeletalMesh* Mesh,const TArray<FName>& Bones,const FString& PackagePath);
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
  static bool SetPinchBaseAnimation(UAnimBlueprint* Blueprint,UAnimSequence* Animation);
+ UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
+ static bool AddReleaseBlendNode(UAnimBlueprint* Blueprint);
 };

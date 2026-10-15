@@ -77,7 +77,7 @@ void AWardrobeShowcase::TickPinchAudio(float Dt){
  }
 }
 bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Direction){
- const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||!Profile||!Character||Direction.IsNearlyZero())return false;
+ const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||!Profile||!Character||Direction.IsNearlyZero())return false;
  Character->HandleExistingParallelEvaluationTask(true,true);
  FCollisionQueryParams Params(SCENE_QUERY_STAT(WardrobePinch),false);Params.AddIgnoredActor(this);
  FHitResult Blocker;float Best=100000;const FVector Ray=Direction.GetSafeNormal();
@@ -93,7 +93,6 @@ bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Directio
   if(FWardrobeKawaiiClickForce::RaySphere(Origin,Ray,Center,FMath::Max(.1f,Region.HitRadius)*Character->GetComponentTransform().GetMaximumAxisScale(),Distance)&&Distance<Best){Selected=I;Best=Distance;}
  }
  if(Selected==INDEX_NONE)return false;
- PendingPinchReleaseSequence=nullptr;
  // A second grab replaces any held voice and repetition.
  StopPinchAudio();
  if(PinchStates.Num()!=Profile->PinchRegions.Num()){ClearPinch();PinchStates.SetNum(Profile->PinchRegions.Num());}
@@ -123,21 +122,25 @@ void AWardrobeShowcase::ReleasePinch(){
  for(auto& State:PinchStates){State.ReleaseReaction=State.Position;State.ReturnAge=0;State.bReturning=true;}
  if(Profile&&Profile->PinchRegions.IsValidIndex(ActivePinch)){
   const auto& R=Profile->PinchRegions[ActivePinch];FWardrobeSoundEntry Release;Release.Sound=PinchRoundReleaseSound;PlayPinchSound(Release,EWardrobeUISound::PinchRelease);PinchRoundReleaseSound.Reset();
-  PendingPinchReleaseSequence=R.ReleaseSequence.LoadSynchronous();PinchReleaseAge=0;
-  // Let the authored body return and the cheek spring settle before the aftercare clip takes over.
-  const float Omega=2*PI*FMath::Max(.1f,R.ReleaseFrequency*R.CheekRecoverySpeed);
-  PinchReleaseDelay=FMath::Max(R.ReactionReturnTime,FMath::Clamp(4.6f/(Omega*FMath::Max(.1f,R.ReleaseDampingRatio)),.1f,3.f));
+  auto* Clip=R.ReleaseAnimation.LoadSynchronous();
+  if(Clip&&Character->GetSkeletalMeshAsset()&&Clip->GetSkeleton()==Character->GetSkeletalMeshAsset()->GetSkeleton()&&Clip->GetPlayLength()>0){
+   ReleaseAnimation=Clip;ReleaseAnimationAge=0;ReleaseAnimationBlendTime=FMath::Clamp(R.ReleaseBlendTime,0.f,3.f);++ReleaseAnimationSerial;
+  }
  }
  ActivePinch=INDEX_NONE;for(auto& State:PinchStates)State.Target=FVector::ZeroVector;
 }
 void AWardrobeShowcase::ClearPinch(){
- StopPinchAudio();PendingPinchReleaseSequence=nullptr;PinchRoundReleaseSound.Reset();
+ StopPinchAudio();ReleaseAnimation=nullptr;ReleaseAnimationAge=0;PinchRoundReleaseSound.Reset();
  for(FName Name:PinchDrivenCurves)if(IsValid(Character))Character->SetMorphTarget(Name,0);PinchDrivenCurves.Reset();
  ActivePinch=INDEX_NONE;PinchStates.Reset();
 }
 void AWardrobeShowcase::TickPinch(float Dt){
  const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||!Profile){if(!PinchStates.IsEmpty())ClearPinch();return;}
  if(!PinchStates.IsEmpty()&&PinchStates.Num()!=Profile->PinchRegions.Num()){ClearPinch();return;}
+ if(ReleaseAnimation){
+  ReleaseAnimationAge+=FMath::Max(0.f,Dt);
+  if(ReleaseAnimationAge>=ReleaseAnimation->GetPlayLength()+ReleaseAnimationBlendTime){ReleaseAnimation=nullptr;}
+ }
  for(int32 I=0;I<PinchStates.Num();I++){
   auto& State=PinchStates[I];const auto& Region=Profile->PinchRegions[I];
   if(!Region.bEnabled)State.Target=FVector::ZeroVector;
@@ -151,6 +154,10 @@ void AWardrobeShowcase::TickPinch(float Dt){
  }
  TickPinchAudio(Dt);
  TMap<FName,float> CurveValues;
+ if(ReleaseAnimation){
+  for(FName Name:PinchDrivenCurves)Character->SetMorphTarget(Name,0);
+  PinchDrivenCurves.Reset();return;
+ }
  for(int32 I=0;I<PinchStates.Num();I++){
   const auto& Region=Profile->PinchRegions[I];const auto& State=PinchStates[I];
   if(!Region.bEnabled||!Character->GetSkeletalMeshAsset())continue;
@@ -174,10 +181,6 @@ void AWardrobeShowcase::TickPinch(float Dt){
  for(FName Name:PinchDrivenCurves)if(!CurveValues.Contains(Name))Character->SetMorphTarget(Name,0);
  PinchDrivenCurves.Reset();
  for(const auto& Pair:CurveValues){Character->SetMorphTarget(Pair.Key,FMath::Clamp(Pair.Value,-1.f,1.f));PinchDrivenCurves.Add(Pair.Key);}
- if(PendingPinchReleaseSequence&&ActivePinch==INDEX_NONE){
-  PinchReleaseAge+=FMath::Max(0.f,Dt);
-  if(PinchReleaseAge>=PinchReleaseDelay){auto* Sequence=PendingPinchReleaseSequence.Get();PendingPinchReleaseSequence=nullptr;PrepareInteractionSequence(Sequence,-2);}
- }
  if(Profile->bDrawPinchRegions)for(const auto& Region:Profile->PinchRegions){if(!Region.bEnabled)continue;const FName Anchor=Region.AnchorBone.IsNone()?Region.Bone:Region.AnchorBone;if(Character->DoesSocketExist(Anchor)){const FTransform TM=Character->GetSocketTransform(Anchor);DrawDebugSphere(GetWorld(),TM.TransformPosition(Region.Offset),Region.HitRadius*Character->GetComponentTransform().GetMaximumAxisScale(),16,FColor::Green,false,0);}}
 }
 

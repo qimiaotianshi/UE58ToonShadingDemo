@@ -7,6 +7,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Animation/AnimBlueprint.h"
+#include "Animation/AnimSequence.h"
 #include "Engine/SkeletalMesh.h"
 #include "LevelSequence.h"
 #include "LevelSequencePlayer.h"
@@ -28,7 +29,7 @@ bool FWardrobePinchReleaseTest::RunTest(const FString&){
  FWardrobePinchSounds Single;Single.Sounds.Add(Pool.Sounds[1]);TestTrue(TEXT("One clip remains supported"),A->ChoosePinchSound(Single,TEXT("TestCheek"),TEXT("Move")).Sound==Single.Sounds[0]);
  FWardrobePinchSounds Empty;TestTrue(TEXT("Empty pool stays silent"),A->ChoosePinchSound(Empty,TEXT("TestCheek"),TEXT("Release")).Sound.IsNull());
  auto MakeSequence=[](){auto* S=NewObject<ULevelSequence>();S->Initialize();S->GetMovieScene()->SetTickResolutionDirectly(FFrameRate(24000,1));S->GetMovieScene()->SetPlaybackRange(0,72000);return S;};
- P.DefaultSequence=MakeSequence();P.PinchRegions.SetNum(1);auto& R=P.PinchRegions[0];R.Bone=TEXT("DB_Pinch_Cheek_L");R.ReleaseSequence=MakeSequence();
+ P.DefaultSequence=MakeSequence();P.PinchRegions.SetNum(1);auto& R=P.PinchRegions[0];R.Bone=TEXT("DB_Pinch_Cheek_L");R.ReleaseAnimation=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/WardrobeFullBodyPinch42/CheekCare49/A_CheekCare_L.A_CheekCare_L"));R.ReleaseBlendTime=.25f;
  A->InteractionData=Data;A->InteractionProfileIndex=0;A->SetInteractionEnabled(true);A->TickSequencePhysicsBlend(1);
  auto Eval=[&](){A->Character->TickAnimation(1.f/60,false);A->Character->RefreshBoneTransforms();A->Character->HandleExistingParallelEvaluationTask(true,true);};Eval();
  const FVector Base=A->Character->GetSocketLocation(R.Bone),Origin=Base+FVector(0,60,0),Ray(0,-1,0);
@@ -44,21 +45,25 @@ bool FWardrobePinchReleaseTest::RunTest(const FString&){
  A->UpdatePinch(Origin+FVector(43,0,0),Ray);A->TickPinch(1.f/60);TestFalse(TEXT("New motion resumes loop"),A->bPinchMovePaused);
  A->RepeatPinchMoveSound();TestTrue(TEXT("Finished sample repeats while moving"),A->bPinchMoveStarted);
  for(int I=0;I<30;I++)A->TickPinch(1.f/60);A->RepeatPinchMoveSound();TestFalse(TEXT("Sample does not repeat while still"),A->bPinchMoveStarted);
+ Eval();
  A->ReleasePinch();TestNull(TEXT("Grab stopped on release"),A->PinchGrabAudio.Get());TestNull(TEXT("Move stopped on release"),A->PinchMoveAudio.Get());
- TestNotNull(TEXT("Release sequence queued"),A->PendingPinchReleaseSequence.Get());A->ReleasePinch();
- TestTrue(TEXT("Default remains during spring recovery"),A->IsDefaultSequencePlaying());
- for(int I=0;I<200;I++){A->TickPinch(1.f/60);if(A->IsInteracting())break;}
- TestTrue(TEXT("Aftercare queued"),A->IsInteracting()&&A->IsSequenceSwitching());A->TickSequencePhysicsBlend(.2f);
- TestFalse(TEXT("Aftercare interrupts default"),A->IsDefaultSequencePlaying());TestTrue(TEXT("Aftercare starts"),A->InteractionPlayer&&A->InteractionPlayer->IsPlaying());
- A->TickInteraction(1.2f);TestTrue(TEXT("Aftercare not cut by interaction timeout"),A->IsInteracting()&&!A->IsSequenceSwitching());
- A->InteractionPlayer->Pause();A->TickInteraction(.01f);TestTrue(TEXT("Aftercare return uses fade"),A->IsSequenceSwitching());A->TickSequencePhysicsBlend(.2f);
- TestFalse(TEXT("Aftercare finished"),A->IsInteracting());TestTrue(TEXT("Default resumes"),A->IsDefaultSequencePlaying());
- Eval();TestTrue(TEXT("Grab again"),A->BeginPinch(Origin,Ray));A->ReleasePinch();TestNotNull(TEXT("Queued again"),A->PendingPinchReleaseSequence.Get());
- TestTrue(TEXT("New grab cancels delayed aftercare"),A->BeginPinch(Origin,Ray));TestNull(TEXT("Delayed sequence canceled"),A->PendingPinchReleaseSequence.Get());
- A->ReleasePinch();A->SetInteractionEnabled(false);A->TickPinch(3);A->TickSequencePhysicsBlend(3);TestFalse(TEXT("Disable prevents queued sequence"),A->IsInteracting()||A->IsDefaultSequencePlaying());
- TestFalse(TEXT("Sound volume removed"),FWardrobeSoundEntry::StaticStruct()->FindPropertyByName(TEXT("Volume"))!=nullptr);
- TestFalse(TEXT("DA master volume removed"),UWardrobeAudioData::StaticClass()->FindPropertyByName(TEXT("MasterVolume"))!=nullptr);
- TestFalse(TEXT("Old movement distance setting removed"),FWardrobePinchRegion::StaticStruct()->FindPropertyByName(TEXT("MoveSoundDistance"))!=nullptr);
+ TestTrue(TEXT("Aftercare animation starts immediately"),A->IsReleaseAnimationPlaying());
+ TestTrue(TEXT("Default stays running"),A->IsDefaultSequencePlaying());
+ TestFalse(TEXT("No physics sequence switch"),A->IsSequenceSwitching());
+ TestFalse(TEXT("Grab blocked during aftercare"),A->BeginPinch(Origin,Ray));
+ const FQuat HeldHead=A->Character->GetSocketQuaternion(TEXT("頭"));
+ Eval();TestTrue(TEXT("First blended frame retains held pose"),HeldHead.AngularDistance(A->Character->GetSocketQuaternion(TEXT("頭")))<.03f);
+ const FVector HandStart=A->Character->GetSocketLocation(TEXT("手首_L"));
+ for(int I=0;I<120;I++){A->TickPinch(1.f/60);Eval();}
+ TestTrue(TEXT("Release clip moves the hand"),FVector::Distance(HandStart,A->Character->GetSocketLocation(TEXT("手首_L")))>8.f);
+ TestTrue(TEXT("Animation time advances"),A->GetReleaseAnimationTime()>1.9f);
+ A->TickPinch(10.f);TestFalse(TEXT("Aftercare completes"),A->IsReleaseAnimationPlaying());
+ TestTrue(TEXT("Default never stopped"),A->IsDefaultSequencePlaying());
+ Eval();TestTrue(TEXT("Grab again"),A->BeginPinch(Origin,Ray));A->ReleasePinch();A->SetInteractionEnabled(false);
+ TestFalse(TEXT("Disable clears aftercare"),A->IsReleaseAnimationPlaying());
+ TestNull(TEXT("Sound volume removed"),FWardrobeSoundEntry::StaticStruct()->FindPropertyByName(TEXT("Volume")));
+ TestNull(TEXT("DA master volume removed"),UWardrobeAudioData::StaticClass()->FindPropertyByName(TEXT("MasterVolume")));
+ TestNull(TEXT("Old movement distance setting removed"),FWardrobePinchRegion::StaticStruct()->FindPropertyByName(TEXT("MoveSoundDistance")));
  GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
 }
 #endif

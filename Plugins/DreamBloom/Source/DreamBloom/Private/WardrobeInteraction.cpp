@@ -48,7 +48,7 @@ int32 AWardrobeShowcase::HitInteraction(const FVector& Origin,const FVector& Dir
 bool AWardrobeShowcase::ClickInteraction(const FVector& Origin,const FVector& Direction){return TriggerInteraction(HitInteraction(Origin,Direction));}
 bool AWardrobeShowcase::TriggerInteraction(int32 RegionIndex){
  const auto* Profile=GetInteractionProfile();
- if(!bInteractionEnabled||IsInteracting()||!Profile)return false;
+ if(!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||!Profile)return false;
  const auto& Person=*Profile;
  if(!Person.Interactions.IsValidIndex(RegionIndex))return false;
  const auto& R=Person.Interactions[RegionIndex];const double Now=GetWorld()->GetTimeSeconds();

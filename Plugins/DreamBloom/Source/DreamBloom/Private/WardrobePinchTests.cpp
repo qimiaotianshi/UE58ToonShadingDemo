@@ -15,7 +15,7 @@ bool FWardrobePinchTest::RunTest(const FString&){
  auto* BP=LoadObject<UAnimBlueprint>(nullptr,TEXT("/Game/WardrobePinch21/AB_DaniyaPinch.AB_DaniyaPinch"));
  auto* Data=LoadObject<UWardrobeCharacterData>(nullptr,TEXT("/Game/WardrobePinch21/DA_PinchCharacters.DA_PinchCharacters"));
  if(!TestNotNull(TEXT("Imported weighted mesh"),Mesh)||!TestNotNull(TEXT("Compiled pinch AnimBP"),BP)||!TestNotNull(TEXT("Demo DA"),Data))return false;
- TestFalse(TEXT("Pull Morph configuration removed"),FWardrobePinchRegion::StaticStruct()->FindPropertyByName(TEXT("PullMorph"))!=nullptr);
+ TestNull(TEXT("Pull Morph configuration removed"),FWardrobePinchRegion::StaticStruct()->FindPropertyByName(TEXT("PullMorph")));
  auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
  auto* Person=W->SpawnActor<AWardrobeShowcase>();Person->Character->SetSkeletalMesh(Mesh);Person->Character->SetAnimInstanceClass(BP->GeneratedClass);
  Person->InteractionData=Data;Person->InteractionProfileIndex=0;Person->SetInteractionEnabled(true);Person->Character->SetMorphTarget(TEXT("DB_Cheek_L_Bulge"),.37f);

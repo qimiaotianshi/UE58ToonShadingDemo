@@ -87,6 +87,11 @@ public:
  void ReleasePinch();
  void ClearPinch();
  void TickPinch(float Dt);
+ UAnimSequence* GetReleaseAnimation() const{return ReleaseAnimation;}
+ float GetReleaseAnimationTime() const{return ReleaseAnimationAge;}
+ float GetReleaseAnimationBlendTime() const{return ReleaseAnimationBlendTime;}
+ int32 GetReleaseAnimationSerial() const{return ReleaseAnimationSerial;}
+ bool IsReleaseAnimationPlaying() const{return ReleaseAnimation!=nullptr;}
  FVector GetPinchOffset(FName Bone) const;
  FQuat GetPinchReactionRotation(FName Bone) const;
  FQuat GetCursorLookRotation(FName Bone) const;
@@ -121,8 +126,10 @@ private:
  TSet<FName> PinchDrivenCurves;
  UPROPERTY(Transient) TObjectPtr<UAudioComponent> PinchGrabAudio;
  UPROPERTY(Transient) TObjectPtr<UAudioComponent> PinchMoveAudio;
- UPROPERTY(Transient) TObjectPtr<ULevelSequence> PendingPinchReleaseSequence;
- float PinchMoveVolume=0,PinchReleaseAge=0,PinchReleaseDelay=0,PinchMotionAge=1.f;
+ UPROPERTY(Transient) TObjectPtr<UAnimSequence> ReleaseAnimation;
+ float ReleaseAnimationAge=0,ReleaseAnimationBlendTime=.25f;
+ int32 ReleaseAnimationSerial=0;
+ float PinchMoveVolume=0,PinchMotionAge=1.f;
  FVector PinchLastMouseDelta=FVector::ZeroVector;
  bool bPinchGrabFinished=true,bPinchMoveStarted=false,bPinchMovePaused=false;
  UPROPERTY(Transient) TSoftObjectPtr<class USoundBase> PinchRoundReleaseSound;

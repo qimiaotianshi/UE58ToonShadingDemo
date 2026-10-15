@@ -1,5 +1,6 @@
 #include "WardrobePinchEditorTools.h"
 #include "WardrobePinchGraphNode.h"
+#include "WardrobeReleaseGraphNode.h"
 #include "Animation/AnimBlueprint.h"
 #if WITH_EDITOR
 #include "Animation/AnimInstance.h"
@@ -30,6 +31,20 @@ bool Link(UEdGraphNode* A,UEdGraphNode* B){
 }
 }
 #endif
+
+bool UWardrobePinchEditorTools::AddReleaseBlendNode(UAnimBlueprint* BP){
+#if WITH_EDITOR
+ if(!BP)return false;
+ for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes)if(Cast<UAnimGraphNode_WardrobeRelease>(N.Get()))return true;
+ for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes)if(auto* Local=Cast<UAnimGraphNode_ComponentToLocalSpace>(N.Get())){
+  auto* Blend=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeRelease>(G.Get(),Local->NodePosX+150);
+  for(auto* Out:Local->Pins)if(Out->Direction==EGPD_Output){auto Links=Out->LinkedTo;for(auto* In:Links){Out->BreakLinkTo(In);for(auto* P:Blend->Pins)if(P->Direction==EGPD_Output)Blend->GetSchema()->TryCreateConnection(P,In);}}
+  if(!WardrobePhysicsTools::Link(Local,Blend))return false;
+  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
+ }
+#endif
+ return false;
+}
 
 UAnimBlueprint* UWardrobePinchEditorTools::CreatePinchTestBlueprint(USkeletalMesh* Mesh,const TArray<FName>& Bones,const FString& PackagePath){
 #if WITH_EDITOR
