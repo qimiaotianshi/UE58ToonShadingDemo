@@ -1,6 +1,8 @@
 #include "WardrobePinchEditorTools.h"
 #include "WardrobePinchGraphNode.h"
 #include "WardrobeReleaseGraphNode.h"
+#include "WardrobeFootIKGraphNode.h"
+#include "WardrobeLimbGraphNode.h"
 #include "Animation/AnimBlueprint.h"
 #if WITH_EDITOR
 #include "Animation/AnimInstance.h"
@@ -40,6 +42,72 @@ bool UWardrobePinchEditorTools::AddReleaseBlendNode(UAnimBlueprint* BP){
   auto* Blend=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeRelease>(G.Get(),Local->NodePosX+150);
   for(auto* Out:Local->Pins)if(Out->Direction==EGPD_Output){auto Links=Out->LinkedTo;for(auto* In:Links){Out->BreakLinkTo(In);for(auto* P:Blend->Pins)if(P->Direction==EGPD_Output)Blend->GetSchema()->TryCreateConnection(P,In);}}
   if(!WardrobePhysicsTools::Link(Local,Blend))return false;
+  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
+ }
+#endif
+ return false;
+}
+
+bool UWardrobePinchEditorTools::AddLimbDragNodes(UAnimBlueprint* BP){
+#if WITH_EDITOR
+ if(!BP)return false;
+ UAnimGraphNode_WardrobeLimbReaction* Body=nullptr;UAnimGraphNode_WardrobeLimbIK* ExistingIK=nullptr;
+ UAnimGraphNode_WardrobeRelease* Release=nullptr;UAnimGraphNode_WardrobeFootIK* Foot=nullptr;UEdGraph* Graph=nullptr;
+ for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes){
+  if(auto* V=Cast<UAnimGraphNode_WardrobeLimbReaction>(N.Get()))Body=V;
+  if(auto* V=Cast<UAnimGraphNode_WardrobeLimbIK>(N.Get()))ExistingIK=V;
+  if(auto* V=Cast<UAnimGraphNode_WardrobeRelease>(N.Get())){Release=V;Graph=G.Get();}
+  if(auto* V=Cast<UAnimGraphNode_WardrobeFootIK>(N.Get()))Foot=V;
+ }
+ if(Body&&ExistingIK)return true;
+ if(!Release||!Foot||Foot->GetGraph()!=Graph)return false;
+ auto Insert=[&](UEdGraphNode* Before,UEdGraphNode* Added){
+  for(auto* Out:Before->Pins)if(Out->Direction==EGPD_Output){auto Links=Out->LinkedTo;for(auto* In:Links){Out->BreakLinkTo(In);for(auto* P:Added->Pins)if(P->Direction==EGPD_Output)if(!Added->GetSchema()->TryCreateConnection(P,In))return false;}}
+  return WardrobePhysicsTools::Link(Before,Added);
+ };
+ if(!Body){Body=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeLimbReaction>(Graph,Release->NodePosX+100);Body->NodePosY=250;if(!Insert(Release,Body))return false;}
+ if(!ExistingIK){ExistingIK=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeLimbIK>(Graph,Foot->NodePosX+100);ExistingIK->NodePosY=250;if(!Insert(Foot,ExistingIK))return false;}
+ FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
+#else
+ return false;
+#endif
+}
+
+bool UWardrobePinchEditorTools::AddFootIKNode(UAnimBlueprint* BP){
+#if WITH_EDITOR
+ if(!BP||!BP->TargetSkeleton)return false;
+ for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes)if(auto* IK=Cast<UAnimGraphNode_WardrobeFootIK>(N.Get())){
+  const auto& Rig=BP->TargetSkeleton->GetReferenceSkeleton();
+  if(Rig.FindBoneIndex(TEXT("足首D_L"))!=INDEX_NONE&&Rig.FindBoneIndex(TEXT("足首D_R"))!=INDEX_NONE){
+   IK->Node.LeftFoot.BoneName=TEXT("足首D_L");IK->Node.RightFoot.BoneName=TEXT("足首D_R");
+   IK->Node.LeftToe.BoneName=TEXT("足先EX_L");IK->Node.RightToe.BoneName=TEXT("足先EX_R");
+  }
+  IK->Node.bAutoSoleContact=true;IK->Node.TraceDistance=100;IK->Node.MaxPelvisOffset=60;
+  auto* Preview=BP->GetPreviewMesh();if(!Preview&&BP->TargetSkeleton)Preview=BP->TargetSkeleton->GetPreviewMesh(true);
+  if(!IK->Node.BuildContactData(Preview)){UE_LOG(LogTemp,Display,TEXT("CONTACT_BAKE_FAILED mesh=%s left=%s right=%s points=%d,%d"),*GetNameSafe(Preview),*IK->Node.LeftFoot.BoneName.ToString(),*IK->Node.RightFoot.BoneName.ToString(),IK->Node.LeftSolePoints.Num(),IK->Node.RightSolePoints.Num());return false;}
+  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
+ }
+ const auto& Ref=BP->TargetSkeleton->GetReferenceSkeleton();
+ auto Choose=[&](std::initializer_list<const TCHAR*> Names)->FName{for(auto* Name:Names)if(Ref.FindBoneIndex(Name)!=INDEX_NONE)return FName(Name);return NAME_None;};
+ const FName L=Choose({TEXT("足首D_L"),TEXT("足首_L"),TEXT("足首.L"),TEXT("LeftFoot"),TEXT("foot_l")}),R=Choose({TEXT("足首D_R"),TEXT("足首_R"),TEXT("足首.R"),TEXT("RightFoot"),TEXT("foot_r")});
+ const FName Pelvis=Choose({TEXT("腰"),TEXT("pelvis"),TEXT("Hips"),TEXT("下半身")});
+ if(L.IsNone()||R.IsNone()||Pelvis.IsNone())return false;
+ for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes)if(auto* Release=Cast<UAnimGraphNode_WardrobeRelease>(N.Get())){
+  auto* ToCS=WardrobePhysicsTools::Add<UAnimGraphNode_LocalToComponentSpace>(G.Get(),Release->NodePosX+200);
+  auto* IK=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeFootIK>(G.Get(),Release->NodePosX+400);
+  auto* ToLocal=WardrobePhysicsTools::Add<UAnimGraphNode_ComponentToLocalSpace>(G.Get(),Release->NodePosX+600);
+  IK->Node.Pelvis.BoneName=Pelvis;IK->Node.LeftFoot.BoneName=L;IK->Node.RightFoot.BoneName=R;
+  IK->Node.LeftToe.BoneName=Choose({TEXT("足先EX_L"),TEXT("つま先_L"),TEXT("つま先.L"),TEXT("ball_l"),TEXT("LeftToeBase")});
+  IK->Node.RightToe.BoneName=Choose({TEXT("足先EX_R"),TEXT("つま先_R"),TEXT("つま先.R"),TEXT("ball_r"),TEXT("RightToeBase")});
+  // Estimate ankle height from reference mesh bounds; shoes may need fine tuning.
+  if(auto* Mesh=BP->GetPreviewMesh()){
+   const auto& MR=Mesh->GetRefSkeleton();auto ComponentRef=[&](FName Name){int32 Index=MR.FindBoneIndex(Name);FTransform T=MR.GetRefBonePose()[Index];while((Index=MR.GetParentIndex(Index))!=INDEX_NONE)T=T*MR.GetRefBonePose()[Index];return T;};
+   const auto Bounds=Mesh->GetImportedBounds();
+   IK->Node.SoleHeight=FMath::Clamp(float((ComponentRef(L).GetLocation().Z+ComponentRef(R).GetLocation().Z)*.5-(Bounds.Origin.Z-Bounds.BoxExtent.Z)),0.f,25.f);
+   IK->Node.BuildContactData(Mesh);
+  }
+  for(auto* Out:Release->Pins)if(Out->Direction==EGPD_Output){auto Links=Out->LinkedTo;for(auto* In:Links){Out->BreakLinkTo(In);for(auto* P:ToLocal->Pins)if(P->Direction==EGPD_Output)ToLocal->GetSchema()->TryCreateConnection(P,In);}}
+  if(!WardrobePhysicsTools::Link(Release,ToCS)||!WardrobePhysicsTools::Link(ToCS,IK)||!WardrobePhysicsTools::Link(IK,ToLocal))return false;
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
  }
 #endif

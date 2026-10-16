@@ -128,7 +128,7 @@ public:
   Put(Main,64,421,38,40,Button(TEXT(""),TEXT("zoom-out"),[this](){if(Owner.IsValid())Owner->ZoomCharacter(3);}));
   Put(Main,64,479,38,40,Button(TEXT(""),TEXT("rotate-ccw"),[this](){if(Owner.IsValid())Owner->ResetCharacter();}));
   Put(Main,62,802,214,52,Button(TEXT("退出游戏"),TEXT("door-open"),[this](){if(Owner.IsValid())Owner->SetQuitPrompt(true);},true));
-  Put(Main,306,831,728,42,Label(TEXT("左键 · 揉捏 / 物理    右键横拖 · 转角色    中键 · 平移    滚轮 · 缩放"),11,Wardrobe::Soft));
+  Put(Main,306,831,728,42,Label(TEXT("左键 · 手脚拖拽 / 揉捏 / 物理    右键横拖 · 转角色    中键 · 平移    滚轮 · 缩放"),11,Wardrobe::Soft));
   Put(Main,1060,106,488,671,SNew(SBorder).BorderImage(&Panel));
   auto Lobby=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&Owner->IsLoggedIn()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   Put(Lobby,1090,125,148,38,Label(TEXT("目的地"),23));
@@ -183,7 +183,7 @@ public:
  }
  virtual FReply OnMouseButtonUp(const FGeometry&,const FPointerEvent& Event)override{
   if(DragButton.IsValid()&&Event.GetEffectingButton()==DragButton){
-   const bool bConsumedByDrag=bPhysicsDragging&&(bDragged||FVector2D::Distance(PressPosition,Event.GetScreenSpacePosition())>1.f);
+   const bool bConsumedByDrag=bPhysicsDragging&&((Owner.IsValid()&&Owner->HasLimbDragGesture())||bDragged||FVector2D::Distance(PressPosition,Event.GetScreenSpacePosition())>1.f);
    if(Owner.IsValid())Owner->EndPhysicsDrag();bPhysicsDragging=false;
    const float Threshold=Owner.IsValid()&&Owner->Data?Owner->Data->ClickDragThreshold:6.f;
    if(DragButton==EKeys::LeftMouseButton&&!bConsumedByDrag&&!bDragged&&FVector2D::Distance(PressPosition,Event.GetScreenSpacePosition())<Threshold&&OnCharacter(Event))Owner->ClickCharacter(Event.GetScreenSpacePosition());

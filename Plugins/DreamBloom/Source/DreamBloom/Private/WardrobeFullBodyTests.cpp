@@ -15,6 +15,17 @@ bool FWardrobeFullBodyTest::RunTest(const FString&){
  auto* BP=LoadObject<UAnimBlueprint>(nullptr,TEXT("/Game/WardrobeFullBodyPinch42/AB_FullBodySequencePinch.AB_FullBodySequencePinch"));
  auto* Data=LoadObject<UWardrobeCharacterData>(nullptr,TEXT("/Game/WardrobeFullBodyPinch42/DA_FullBodyCharacters.DA_FullBodyCharacters"));
  if(!TestNotNull(TEXT("Mesh"),Mesh)||!TestNotNull(TEXT("BP"),BP)||!TestNotNull(TEXT("DA"),Data))return false;
+ // Keep this regression deterministic when the user's live DA removes regions
+ // or deliberately leaves reaction slots empty. Never edit their saved asset.
+ Data=DuplicateObject<UWardrobeCharacterData>(Data,GetTransientPackage());
+ auto& Profile=Data->Characters[0];Profile.PinchRegions.Reset();
+ for(const FString Suffix:{TEXT("Cheek_L"),TEXT("Cheek_R"),TEXT("Belly"),TEXT("Thigh_L"),TEXT("Thigh_R")}){
+  FWardrobePinchRegion Region;Region.Bone=FName(*(TEXT("DB_Pinch_")+Suffix));Region.BodyUpAxis=FVector(0,0,-1); // Authored FullBody42 clip convention.
+  auto Load=[&](const TCHAR* Direction){const FString Name=TEXT("A_")+Suffix+TEXT("_")+Direction;return LoadObject<UAnimSequence>(nullptr,*(TEXT("/Game/WardrobeFullBodyPinch42/")+Name+TEXT(".")+Name));};
+  Region.BodyLeft=Load(TEXT("Left"));Region.BodyRight=Load(TEXT("Right"));Region.BodyUp=Load(TEXT("Up"));Region.BodyDown=Load(TEXT("Down"));
+  if(!TestNotNull(TEXT("Fixture left clip"),Region.BodyLeft.Get())||!TestNotNull(TEXT("Fixture right clip"),Region.BodyRight.Get())||!TestNotNull(TEXT("Fixture up clip"),Region.BodyUp.Get())||!TestNotNull(TEXT("Fixture down clip"),Region.BodyDown.Get()))return false;
+  Profile.PinchRegions.Add(Region);
+ }
  auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
  auto* P=W->SpawnActor<AWardrobeShowcase>();P->Character->SetSkeletalMesh(Mesh);P->Character->SetAnimInstanceClass(BP->GeneratedClass);P->InteractionData=Data;P->InteractionProfileIndex=0;P->SetInteractionEnabled(true);
  auto Eval=[&](){P->Character->TickAnimation(1.f/60,false);P->Character->RefreshBoneTransforms();P->Character->HandleExistingParallelEvaluationTask(true,true);};Eval();

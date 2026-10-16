@@ -77,7 +77,7 @@ void AWardrobeShowcase::TickPinchAudio(float Dt){
  }
 }
 bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Direction){
- const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||!Profile||!Character||Direction.IsNearlyZero())return false;
+ const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||HasLimbPose()||IsReleaseAnimationPlaying()||!Profile||!Character||Direction.IsNearlyZero())return false;
  Character->HandleExistingParallelEvaluationTask(true,true);
  FCollisionQueryParams Params(SCENE_QUERY_STAT(WardrobePinch),false);Params.AddIgnoredActor(this);
  FHitResult Blocker;float Best=100000;const FVector Ray=Direction.GetSafeNormal();

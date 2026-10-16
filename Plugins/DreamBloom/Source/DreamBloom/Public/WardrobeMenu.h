@@ -46,6 +46,7 @@ public:
  bool BeginPhysicsDrag(FVector2D ScreenPosition);
  void UpdatePhysicsDrag(FVector2D ScreenPosition);
  void EndPhysicsDrag();
+ bool HasLimbDragGesture() const;
  void PlayClickEffect(FVector2D ScreenPosition);
  void StopClickEffect();
  void CapturePreviewCamera();

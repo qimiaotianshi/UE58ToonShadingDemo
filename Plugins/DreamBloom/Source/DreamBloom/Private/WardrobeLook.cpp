@@ -23,7 +23,7 @@ void AWardrobeShowcase::TickCursorLook(float Dt){
 }
 void AWardrobeShowcase::UpdateCursorLook(float Dt,const FVector& Origin,const FVector& Ray,bool bHasPointer){
  const auto* Profile=GetInteractionProfile();FVector2D Target=FVector2D::ZeroVector;
- bool Busy=!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||IsPinching()||bPhysicsDragging||bPhysicsTouchActive;
+ bool Busy=!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||HasLimbPose()||IsPinching()||bPhysicsDragging||bPhysicsTouchActive;
  bool bPinchReturning=false;float GazeBlend=1.f;
  for(int32 I=0;I<PinchStates.Num();I++){
   const auto& State=PinchStates[I];

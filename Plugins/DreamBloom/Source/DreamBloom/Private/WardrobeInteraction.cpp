@@ -86,7 +86,7 @@ bool AWardrobeShowcase::PrepareInteractionSequence(ULevelSequence* Sequence,int3
  }
  InteractionPlayer=Player;InteractionSequenceActor=Actor;
  InteractionAge=0;ActiveInteraction=RegionIndex;++InteractionPlayCount;
- PendingSequenceSwitch=1;ClearPinch();StopPhysicsTouch();
+ PendingSequenceSwitch=1;ClearLimbDrag();ClearPinch();StopPhysicsTouch();
  FadeSequencePhysics(0,Profile->PhysicsFadeTime);
  if(PhysicsBlendDuration<=0)StartPreparedInteraction();
  return true;

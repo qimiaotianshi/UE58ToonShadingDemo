@@ -3,6 +3,7 @@
 #include "Engine/DataAsset.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameModeBase.h"
+#include "WardrobeLimbDrag.h"
 #include "WardrobeShowcase.generated.h"
 
 class USkeletalMeshComponent;
@@ -82,6 +83,15 @@ public:
  bool BeginPhysicsDrag(const FVector& Origin,const FVector& Direction);
  void UpdatePhysicsDrag(const FVector& Origin,const FVector& Direction);
  bool IsPhysicsDragging() const{return bPhysicsDragging;}
+ bool BeginLimbDrag(const FVector& Origin,const FVector& Direction);
+ void UpdateLimbDrag(const FVector& Origin,const FVector& Direction);
+ void ReleaseLimbDrag();
+ void ClearLimbDrag();
+ void TickLimbDrag(float Dt);
+ bool IsLimbDragging() const{return ActiveLimb!=INDEX_NONE&&!bLimbReturning;}
+ bool HasLimbPose() const{return ActiveLimb!=INDEX_NONE;}
+ FWardrobeLimbSnapshot GetLimbSnapshot() const;
+ float GetLimbGroundSuppression(FName Foot) const;
  bool BeginPinch(const FVector& Origin,const FVector& Direction);
  void UpdatePinch(const FVector& Origin,const FVector& Direction);
  void ReleasePinch();
@@ -109,6 +119,12 @@ public:
  virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 private:
  bool bInteractionEnabled=false;
+ int32 ActiveLimb=INDEX_NONE;
+ bool bLimbReturning=false;
+ float LimbReturnAge=0;
+ FVector LimbStartWorld=FVector::ZeroVector,LimbDelta=FVector::ZeroVector,LimbTargetDelta=FVector::ZeroVector;
+ FVector LimbPlanePoint=FVector::ZeroVector,LimbPlaneNormal=FVector::ForwardVector,LimbPole=FVector::ForwardVector;
+ FVector LimbScreenRight=FVector::RightVector,LimbScreenUp=FVector::UpVector;
  float SequencePhysicsWeight=1.f;
  float PhysicsBlendFrom=1.f,PhysicsBlendTarget=1.f,PhysicsBlendAge=0.f,PhysicsBlendDuration=0.f;
  uint8 PendingSequenceSwitch=0; // 1 = prepared reaction, 2 = return to default

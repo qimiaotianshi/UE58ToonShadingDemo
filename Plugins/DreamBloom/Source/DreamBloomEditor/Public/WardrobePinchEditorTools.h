@@ -13,4 +13,8 @@ public:
  static bool SetPinchBaseAnimation(UAnimBlueprint* Blueprint,UAnimSequence* Animation);
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
  static bool AddReleaseBlendNode(UAnimBlueprint* Blueprint);
+ UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
+ static bool AddFootIKNode(UAnimBlueprint* Blueprint);
+ UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
+ static bool AddLimbDragNodes(UAnimBlueprint* Blueprint);
 };
