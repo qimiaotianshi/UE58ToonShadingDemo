@@ -25,6 +25,13 @@ struct DREAMBLOOM_API FAnimNode_WardrobeFootIK : public FAnimNode_SkeletalContro
  UPROPERTY(EditAnywhere, Category="Ground", meta=(ClampMin="0", Units="cm")) float MaxPlantHeight=18.f;
  UPROPERTY(EditAnywhere, Category="Ground", meta=(ClampMin="0",ClampMax="60",Units="deg")) float MaxSlopeAngle=45.f;
  UPROPERTY(EditAnywhere, Category="Ground", meta=(ClampMin="0",Units="s")) float BlendTime=.15f;
+ /** Optional locomotion-only horizontal foot locking, driven by authored plant curves. */
+ UPROPERTY(EditAnywhere, Category="Foot Lock") bool bLockPlantedFeet=false;
+ UPROPERTY(EditAnywhere, Category="Foot Lock") FName LeftPlantCurve=TEXT("ALS_FootPlant_L");
+ UPROPERTY(EditAnywhere, Category="Foot Lock") FName RightPlantCurve=TEXT("ALS_FootPlant_R");
+ UPROPERTY(EditAnywhere, Category="Foot Lock", meta=(ClampMin="0",Units="cm")) float MaxFootLockDistance=35.f;
+ /** Ease the existing correction back to the authored swing pose on lift-off. */
+ UPROPERTY(EditAnywhere, Category="Foot Lock", meta=(ClampMin="0.01",Units="s")) float FootLockReleaseTime=.12f;
  UPROPERTY(EditAnywhere, Category="Debug") bool bDebugDraw=false;
  virtual bool HasPreUpdate() const override {return true;}
  virtual void PreUpdate(const UAnimInstance* Instance) override;
@@ -50,4 +57,12 @@ struct DREAMBLOOM_API FAnimNode_WardrobeFootIK : public FAnimNode_SkeletalContro
  bool bSnap=true;
  float LastPlant[2]={0,0};
  float DragSuppression[2]={0,0};
+ bool bFootLocked[2]={false,false};
+ FVector LockedFootWorld[2]={FVector::ZeroVector,FVector::ZeroVector};
+ FVector LockForward[2]={FVector::ForwardVector,FVector::ForwardVector};
+ bool bLockReleasing[2]={false,false};
+ bool bLockCanAcquire[2]={true,true};
+ FVector LockReleaseOffset[2]={FVector::ZeroVector,FVector::ZeroVector};
+ float LockReleaseElapsed[2]={0,0};
+ FVector UpdateFootLock(int Side,const FVector& WorldFoot,float Lock,bool bCanLock);
 };

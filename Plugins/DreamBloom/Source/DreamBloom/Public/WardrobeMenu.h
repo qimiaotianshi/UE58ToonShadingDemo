@@ -20,6 +20,8 @@ public:
  int32 Mode=INDEX_NONE;
  FString Name=TEXT("旅人");
  int32 SelectedMap=0;
+ UPROPERTY() TObjectPtr<UWardrobeMenuData> ExplorationMenuData;
+ UPROPERTY() TSoftObjectPtr<UWorld> ExplorationReturnLevel;
 };
 
 UCLASS(Blueprintable)

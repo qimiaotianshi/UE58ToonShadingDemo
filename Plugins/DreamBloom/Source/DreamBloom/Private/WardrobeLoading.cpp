@@ -1,4 +1,5 @@
 #include "WardrobeLoading.h"
+#include "WardrobeLocomotion.h"
 #include "WardrobeShowcase.h"
 #include "WardrobeMenu.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -67,8 +68,7 @@ public:
    SNew(SOverlay)
    +SOverlay::Slot()[SNew(SImage).Image(Solid).ColorAndOpacity(FLinearColor(.012f,.027f,.061f,1))]
    +SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill)
-    [SNew(SImage).Image(&Visual->Image).Visibility(Visual->HasImage?EVisibility::HitTestInvisible:EVisibility::Collapsed)]]
-   +SOverlay::Slot()[SNew(SImage).Image(Solid).ColorAndOpacity(FLinearColor(0,.012f,.035f,.25f))]
+    [SNew(SImage).Image(&Visual->Image).ColorAndOpacity(FLinearColor::White).Visibility(Visual->HasImage?EVisibility::HitTestInvisible:EVisibility::Collapsed)]]
    +SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(64,48)
     [SNew(STextBlock).Text(FText::FromString(TEXT("奇境漫游   /   JOURNEY"))).Font(FSlateFontInfo(Visual->Font,17)).ColorAndOpacity(Gold)]
    +SOverlay::Slot().VAlign(VAlign_Bottom)
@@ -145,6 +145,7 @@ bool UWardrobeLoadingSubsystem::TravelToLevel(TSoftObjectPtr<UWorld> Level,UWard
  Visual->Image.SetResourceObject(LoadingTexture);
  Visual->Image.ImageSize=LoadingTexture?FVector2D(LoadingTexture->GetSizeX(),LoadingTexture->GetSizeY()):FVector2D(1920,1080);
  Visual->Image.DrawAs=ESlateBrushDrawType::Image;
+ Visual->Image.TintColor=FSlateColor(FLinearColor::White);
  Visual->Font=MakeShared<FCompositeFont>(NAME_None,IPluginManager::Get().FindPlugin(TEXT("DreamBloom"))->GetBaseDir()/TEXT("Resources/NotoSansSC-Regular.ttf"),EFontHinting::Default,EFontLoadingPolicy::LazyLoad);
  Visual->Destination=Destination.IsEmpty()?FText::FromString(TEXT("下一段旅程")):Destination;
  Visual->Hint=Settings?Settings->LoadingHint:FText::FromString(TEXT("新的风景，即将展开。"));
@@ -284,6 +285,7 @@ void UWardrobeLoadingSubsystem::Finish(bool bFailed)
   }else FSlateApplication::Get().SetAllUserFocusToGameViewport();
  }
  bActive=false;
+ if(!bFailed)if(auto* PC=Cast<AWardrobeExplorerController>(GetGameInstance()->GetFirstLocalPlayerController()))PC->SetExplorerInput();
  if(!bFailed)++CompletedTravels;
  UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_END target=%s failed=%d manual=%d frames=%u seconds=%.2f completed=%d"),*PackageName,bFailed,bManualContinue,WarmupFrames,FPlatformTime::Seconds()-StartedAt,CompletedTravels);
  Overlay.Reset();DestinationWorld.Reset();PreviousFocus.Reset();

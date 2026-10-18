@@ -1,0 +1,155 @@
+#include "WardrobeLocomotion.h"
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Misc/AutomationTest.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Animation/AnimBlueprint.h"
+#include "Animation/AnimSequence.h"
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/LocalPlayer.h"
+#include "Engine/SkeletalMesh.h"
+#include "InputActionValue.h"
+#include "EnhancedInputComponent.h"
+#include "InputMappingContext.h"
+#include "WardrobeFootIKNode.h"
+#include "AnimNode_KawaiiPhysics.h"
+#include "UObject/UnrealType.h"
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeLocomotionTest,"DreamBloom.Locomotion.WalkRunBlendAndCollision",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeLocomotionTest::RunTest(const FString&){
+ auto* Class=LoadClass<AWardrobeExplorer>(nullptr,TEXT("/Game/BluePrint/ALS/Characters/BP_ALSCharacter.BP_ALSCharacter_C"));
+ if(!TestNotNull(TEXT("Saved playable character blueprint"),Class))return false;
+ auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
+ auto* A=W->SpawnActor<AWardrobeExplorer>(Class,FVector(0,0,85),FRotator::ZeroRotator);
+ auto* PC=W->SpawnActor<AWardrobeExplorerController>();PC->SetPlayer(NewObject<ULocalPlayer>(GEngine));PC->Possess(A);A->ApplySettings();
+ PC->ResetIgnoreMoveInput();PC->ResetIgnoreLookInput();
+ A->GetCharacterMovement()->bRunPhysicsWithNoController=true;
+ TestNotNull(TEXT("Saved data asset retained"),A->Settings.Get());
+ TestNotNull(TEXT("Saved skeletal mesh retained"),A->GetMesh()->GetSkeletalMeshAsset());
+ const float MeshHalfHeight=A->GetMesh()->GetSkeletalMeshAsset()->GetImportedBounds().BoxExtent.Z;
+ TestTrue(TEXT("FBX unit conversion retains a character about 155 cm tall"),MeshHalfHeight>60&&MeshHalfHeight<100);
+ TestTrue(TEXT("X-forward FBX requires no extra mesh yaw compensation"),FMath::Abs(A->GetMesh()->GetRelativeRotation().Yaw)<.01f);
+ auto* Anim=Cast<UWardrobeLocomotionAnim>(A->GetMesh()->GetAnimInstance());
+ if(!TestNotNull(TEXT("Saved animation blueprint retained"),Anim)){GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return false;}
+ auto* FloorActor=W->SpawnActor<AActor>();auto* Floor=NewObject<UBoxComponent>(FloorActor);FloorActor->SetRootComponent(Floor);Floor->SetBoxExtent(FVector(10000,10000,10));Floor->SetCollisionResponseToAllChannels(ECR_Block);Floor->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Floor->RegisterComponent();FloorActor->SetActorLocation(FVector(0,0,-10));
+ auto Eval=[&](){A->GetMesh()->TickAnimation(1.f/60,false);A->GetMesh()->RefreshBoneTransforms();A->GetMesh()->HandleExistingParallelEvaluationTask(true,true);};
+ auto Step=[&](int Frames,bool Moving){for(int I=0;I<Frames;I++){if(Moving)A->Move(FInputActionValue(FVector2D(0,1)));A->GetCharacterMovement()->TickComponent(1.f/60,LEVELTICK_All,nullptr);Eval();}};
+ A->GetCharacterMovement()->SetMovementMode(MOVE_Walking);PC->SetControlRotation(FRotator(0,0,0));Eval();
+ TestTrue(TEXT("Idle gait begins neutral"),Anim->Gait<.01f);
+ const FQuat IdleLeg=A->GetMesh()->GetSocketQuaternion(TEXT("足D_L"));Step(90,true);
+ TestTrue(TEXT("Walk head stays above the pelvis after FBX coordinate conversion"),A->GetMesh()->GetSocketLocation(TEXT("頭")).Z>A->GetMesh()->GetSocketLocation(TEXT("腰")).Z+20);
+ AddInfo(FString::Printf(TEXT("Walk: location=%s velocity=%s mode=%d local=%d ignored=%d input=%s"),*A->GetActorLocation().ToString(),*A->GetVelocity().ToString(),int(A->GetCharacterMovement()->MovementMode),A->IsLocallyControlled(),PC->IsMoveInputIgnored(),*A->GetPendingMovementInputVector().ToString()));
+ TestTrue(TEXT("W walks at configured speed"),FMath::Abs(A->GetVelocity().Size2D()-A->Settings->WalkSpeed)<1);
+ TestTrue(TEXT("Walking moves character through the map"),A->GetActorLocation().X>100);
+ TestTrue(TEXT("Walk sample selected smoothly"),FMath::Abs(Anim->Gait-1)<.02f);
+ TestTrue(TEXT("Walk playback matches source stride speed"),FMath::Abs(Anim->LocomotionPlayRate-A->Settings->WalkSpeed/A->Settings->WalkAnimationSpeed)<.02f);
+ TestTrue(TEXT("Walking changes actual leg pose"),IdleLeg.AngularDistance(A->GetMesh()->GetSocketQuaternion(TEXT("足D_L")))>.05f);
+ A->StartSprint();const float Before=A->GetVelocity().Size2D();Step(1,true);
+ TestTrue(TEXT("Sprint accelerates rather than teleports speed"),A->GetVelocity().Size2D()>Before&&A->GetVelocity().Size2D()<A->Settings->RunSpeed);
+ Step(90,true);TestTrue(TEXT("Shift reaches configured run speed"),FMath::Abs(A->GetVelocity().Size2D()-A->Settings->RunSpeed)<1);
+ TestTrue(TEXT("Run head stays above the pelvis after FBX coordinate conversion"),A->GetMesh()->GetSocketLocation(TEXT("頭")).Z>A->GetMesh()->GetSocketLocation(TEXT("腰")).Z+20);
+ TestTrue(TEXT("Run sample selected"),Anim->Gait>1.98f);
+ TestTrue(TEXT("Run playback matches source stride speed"),FMath::Abs(Anim->LocomotionPlayRate-A->Settings->RunSpeed/A->Settings->RunAnimationSpeed)<.02f);
+ A->StopSprint();Step(90,true);TestTrue(TEXT("Releasing Shift returns to walk"),FMath::Abs(Anim->Gait-1)<.02f);
+ Step(90,false);TestTrue(TEXT("Released movement stops capsule"),A->GetVelocity().Size2D()<.1f);TestTrue(TEXT("Stopped character blends back to idle"),Anim->Gait<.01f);
+ const FVector Start=A->GetActorLocation();PC->SetControlRotation(FRotator(0,90,0));Step(60,true);
+ TestTrue(TEXT("Movement follows camera yaw"),A->GetActorLocation().Y>Start.Y+80);
+ Step(90,false);PC->SetControlRotation(FRotator(0,0,0));
+ auto* WallActor=W->SpawnActor<AActor>();auto* Wall=NewObject<UBoxComponent>(WallActor);WallActor->SetRootComponent(Wall);Wall->SetBoxExtent(FVector(10,500,150));Wall->SetCollisionResponseToAllChannels(ECR_Block);Wall->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Wall->RegisterComponent();WallActor->SetActorLocation(A->GetActorLocation()+FVector(100,0,65));
+ Step(120,true);TestTrue(TEXT("Wall stops capsule penetration"),A->GetActorLocation().X<WallActor->GetActorLocation().X-30);
+ TestTrue(TEXT("Blocked character animation follows actual velocity"),Anim->Gait<.05f);
+ TArray<UObject*> Components;auto* Input=NewObject<UEnhancedInputComponent>(A);A->SetupPlayerInputComponent(Input);TestTrue(TEXT("Enhanced input bindings installed"),Input->GetActionEventBindings().Num()>=6);
+ TestEqual(TEXT("Only gameplay GameMode spawns playable pawn"),GetDefault<AWardrobeExplorerGameMode>()->DefaultPawnClass.Get(),AWardrobeExplorer::StaticClass());
+ GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeLocomotionPlantTest,"DreamBloom.Locomotion.PhysicsTranslationAndFootPlant",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeLocomotionPlantTest::RunTest(const FString&){
+ auto* Class=LoadClass<AWardrobeExplorer>(nullptr,TEXT("/Game/BluePrint/ALS/Characters/BP_ALSCharacter.BP_ALSCharacter_C"));if(!TestNotNull(TEXT("Playable character"),Class))return false;
+ auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
+ auto* A=W->SpawnActor<AWardrobeExplorer>(Class,FVector(0,0,87),FRotator::ZeroRotator);
+ auto* PC=W->SpawnActor<AWardrobeExplorerController>();PC->SetPlayer(NewObject<ULocalPlayer>(GEngine));PC->Possess(A);A->ApplySettings();PC->SetControlRotation(FRotator::ZeroRotator);
+ auto* FloorActor=W->SpawnActor<AActor>();auto* Floor=NewObject<UBoxComponent>(FloorActor);FloorActor->SetRootComponent(Floor);Floor->SetBoxExtent(FVector(10000,10000,10));Floor->SetCollisionResponseToAllChannels(ECR_Block);Floor->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Floor->RegisterComponent();FloorActor->SetActorLocation(FVector(0,0,-10));
+ auto Eval=[&](){A->GetMesh()->TickAnimation(1.f/60,false);A->GetMesh()->RefreshBoneTransforms();A->GetMesh()->HandleExistingParallelEvaluationTask(true,true);};Eval();
+ FAnimNode_WardrobeFootIK* IK=nullptr;FAnimNode_KawaiiPhysics* K=nullptr;
+ for(TFieldIterator<FStructProperty> P(A->GetMesh()->GetAnimInstance()->GetClass());P;++P){if(P->Struct==FAnimNode_WardrobeFootIK::StaticStruct())IK=P->ContainerPtrToValuePtr<FAnimNode_WardrobeFootIK>(A->GetMesh()->GetAnimInstance());if(P->Struct==FAnimNode_KawaiiPhysics::StaticStruct())K=P->ContainerPtrToValuePtr<FAnimNode_KawaiiPhysics>(A->GetMesh()->GetAnimInstance());}
+ if(!TestNotNull(TEXT("Foot IK"),IK)||!TestNotNull(TEXT("Kawaii physics"),K)){GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return false;}
+ TestTrue(TEXT("Locomotion enables foot locking"),IK->bLockPlantedFeet);
+ TestTrue(TEXT("Local physics keeps rotation response"),K->SimulationSpace==EKawaiiPhysicsSimulationSpace::ComponentSpace&&K->PhysicsSettings.WorldDampingRotation<1.f);
+ for(const auto& Bone:K->ModifyBones)TestEqual(TEXT("All simulated bones ignore world translation"),Bone.PhysicsSettings.WorldDampingLocation,1.f);
+ auto PhysicsTrial=[&](bool Moving){
+  A->SetActorLocation(FVector(0,0,87));A->GetCharacterMovement()->Velocity=FVector::ZeroVector;A->GetMesh()->InitAnim(true);
+  for(TFieldIterator<FStructProperty> P(A->GetMesh()->GetAnimInstance()->GetClass());P;++P){if(P->Struct==FAnimNode_WardrobeFootIK::StaticStruct())IK=P->ContainerPtrToValuePtr<FAnimNode_WardrobeFootIK>(A->GetMesh()->GetAnimInstance());if(P->Struct==FAnimNode_KawaiiPhysics::StaticStruct())K=P->ContainerPtrToValuePtr<FAnimNode_KawaiiPhysics>(A->GetMesh()->GetAnimInstance());}
+  // Compare the same animation phase, without ground adaptation or plant locking
+  // moving the input pose. Only the component world translation changes.
+  IK->bEnabled=false;
+  for(int I=0;I<180;I++){if(Moving)A->AddActorWorldOffset(FVector(7,0,0));Eval();}
+  TArray<FVector> Result;for(const auto& Bone:K->ModifyBones)Result.Add(Bone.Location);return Result;
+ };
+ const auto Stationary=PhysicsTrial(false),Translated=PhysicsTrial(true);float Worst=0;
+ if(TestEqual(TEXT("Simulation cache count"),Translated.Num(),Stationary.Num()))for(int I=0;I<Stationary.Num();I++)Worst=FMath::Max(Worst,float(FVector::Distance(Stationary[I],Translated[I])));
+ AddInfo(FString::Printf(TEXT("Physics after 1260 cm translation: max local difference %.4f cm"),Worst));TestTrue(TEXT("Translation does not drag secondary chains behind the character"),Worst<.5f);
+ IK->bEnabled=true;
+ auto SlipTrial=[&](bool Lock,bool Run){
+  IK->bLockPlantedFeet=Lock;for(int I=0;I<2;I++){IK->bFootLocked[I]=IK->bLockReleasing[I]=false;IK->bLockCanAcquire[I]=true;}A->SetActorLocation(FVector(0,0,87));A->GetCharacterMovement()->SetMovementMode(MOVE_Walking);if(Run)A->StartSprint();else A->StopSprint();
+  auto Step=[&](){A->Move(FInputActionValue(FVector2D(0,1)));A->GetCharacterMovement()->TickComponent(1.f/60,LEVELTICK_All,nullptr);Eval();};for(int I=0;I<90;I++)Step();
+  FVector Last[2],PreviousOffset[2];float Prev[2]={0,0};bool WasReleasing[2]={false,false};double Total=0;int Count=0,Releases=0;float WorstReleaseJump=0,WorstLiftFrame=0;
+  for(int Frame=0;Frame<240;Frame++){Step();auto* Anim=A->GetMesh()->GetAnimInstance();for(int I=0;I<2;I++){
+   const float Plant=Anim->GetCurveValue(I==0?IK->LeftPlantCurve:IK->RightPlantCurve);const FVector Pos=A->GetMesh()->GetSocketLocation(I==0?IK->LeftFoot.BoneName:IK->RightFoot.BoneName);
+   if(Frame>0&&Prev[I]>.95f&&Plant>.95f){Total+=FVector::DistXY(Last[I],Pos)*60;Count++;}
+   if(Frame>0&&Lock&&IK->bLockReleasing[I])WorstLiftFrame=FMath::Max(WorstLiftFrame,float(FVector::Distance(Last[I],Pos)));
+   if(Frame>0&&Lock&&IK->bLockReleasing[I]&&!WasReleasing[I]){const FVector Diff=IK->SmoothedOffset[I]-PreviousOffset[I];WorstReleaseJump=FMath::Max(WorstReleaseJump,float(Diff.Size2D()));Releases++;}
+   Last[I]=Pos;Prev[I]=Plant;PreviousOffset[I]=IK->SmoothedOffset[I];WasReleasing[I]=IK->bLockReleasing[I];
+  }}
+  if(Lock){AddInfo(FString::Printf(TEXT("%s actual lift-off: %d releases, correction jump %.4f cm, max foot displacement per 60 FPS frame %.4f cm"),Run?TEXT("Run"):TEXT("Walk"),Releases,WorstReleaseJump,WorstLiftFrame));TestTrue(TEXT("Real animation releases each planted foot"),Releases>5);TestTrue(TEXT("Actual lift-off retains the last applied XY correction"),WorstReleaseJump<.01f);TestTrue(TEXT("Actual lift-off has no large single-frame foot displacement"),WorstLiftFrame<12.f);}
+  TestTrue(TEXT("Authored plant curves produce contact samples"),Count>20);return Count?float(Total/Count):BIG_NUMBER;
+ };
+ for(bool Run:{false,true}){const float Without=SlipTrial(false,Run),With=SlipTrial(true,Run);AddInfo(FString::Printf(TEXT("%s planted world speed: without lock %.3f with lock %.3f cm/s"),Run?TEXT("Run"):TEXT("Walk"),Without,With));TestTrue(TEXT("Foot locking reduces horizontal slip"),With<Without*.5f);}
+ GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeFootLiftTest,"DreamBloom.Locomotion.FootLockLiftOffContinuity",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeFootLiftTest::RunTest(const FString&){
+ for(int FPS:{30,60,120}){
+  FAnimNode_WardrobeFootIK IK;IK.DeltaTime=1.f/FPS;IK.MeshWorld=FTransform::Identity;
+  IK.UpdateFootLock(0,FVector::ZeroVector,1,true);
+  IK.MeshWorld.SetTranslation(FVector(15,0,0));const FVector Locked=IK.UpdateFootLock(0,FVector(15,0,0),1,true);IK.SmoothedOffset[0]=Locked;
+  const FVector First=IK.UpdateFootLock(0,FVector(15,0,0),0,true);
+  TestTrue(TEXT("Sudden curve drop preserves last correction on the release frame"),First.Equals(Locked,.001f));
+  FVector Previous=First;float Worst=0;
+  for(int Frame=0;Frame<FPS;Frame++){
+   const FVector Offset=IK.UpdateFootLock(0,FVector(15,0,0),0,true);Worst=FMath::Max(Worst,float(FVector::Distance(Offset,Previous)));
+   TestTrue(TEXT("Release correction decreases without overshoot"),Offset.Size()<=Previous.Size()+.001f);Previous=Offset;IK.SmoothedOffset[0]=Offset;
+  }
+  TestTrue(TEXT("Release reaches the original animation"),Previous.IsNearlyZero(.001f));
+  AddInfo(FString::Printf(TEXT("Lift-off %d FPS: release frame jump %.4f cm, max subsequent correction step %.4f cm"),FPS,FVector::Distance(First,Locked),Worst));
+  TestTrue(TEXT("Release is spread across multiple frames"),Worst<8.f);
+  IK.UpdateFootLock(0,FVector(15,0,0),1,true);TestTrue(TEXT("The next contact can lock again"),IK.bFootLocked[0]);
+  IK.SmoothedOffset[0]=FVector(-8,0,0);IK.MeshWorld.SetRotation(FQuat(FVector::UpVector,FMath::DegreesToRadians(45.f)));
+  TestTrue(TEXT("Turn safety release retains current correction"),IK.UpdateFootLock(0,FVector(15,0,0),1,true).Equals(FVector(-8,0,0),.001f));
+  for(int Frame=0;Frame<FPS;Frame++)IK.UpdateFootLock(0,FVector(15,0,0),1,true);
+  TestFalse(TEXT("Safety release cannot recapture in the same contact"),IK.bFootLocked[0]);
+ }
+ return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeCameraZoomTest,"DreamBloom.Locomotion.CameraWheelZoom",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeCameraZoomTest::RunTest(const FString&){
+ auto* Class=LoadClass<AWardrobeExplorer>(nullptr,TEXT("/Game/BluePrint/ALS/Characters/BP_ALSCharacter.BP_ALSCharacter_C"));if(!TestNotNull(TEXT("Playable character"),Class))return false;
+ auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
+ auto* A=W->SpawnActor<AWardrobeExplorer>(Class);auto* PC=W->SpawnActor<AWardrobeExplorerController>();PC->SetPlayer(NewObject<ULocalPlayer>(GEngine));PC->Possess(A);A->ApplySettings();
+ if(!TestNotNull(TEXT("Camera data"),A->Settings.Get())){GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return false;}
+ TestNotNull(TEXT("Zoom action configured"),A->Settings->ZoomAction.Get());bool Mapped=false;
+ for(const auto& Mapping:A->Settings->Mapping->GetMappings())if(Mapping.Action==A->Settings->ZoomAction&&Mapping.Key==EKeys::MouseWheelAxis)Mapped=true;
+ TestTrue(TEXT("Wheel axis maps to zoom"),Mapped);auto* Input=NewObject<UEnhancedInputComponent>(A);A->SetupPlayerInputComponent(Input);TestTrue(TEXT("Zoom event binding installed"),Input->GetActionEventBindings().Num()>=7);
+ const float Start=A->CameraBoom->TargetArmLength;A->Zoom(FInputActionValue(1.f));
+ TestTrue(TEXT("Wheel up selects a nearer target"),A->CameraZoomOffset<0);TestEqual(TEXT("Wheel does not snap the camera"),A->CameraBoom->TargetArmLength,Start);
+ A->Tick(1.f/60);TestTrue(TEXT("Camera interpolates toward the nearer target"),A->CameraBoom->TargetArmLength<Start&&A->CameraBoom->TargetArmLength>Start+A->CameraZoomOffset);
+ for(int I=0;I<60;I++)A->Tick(1.f/60);TestTrue(TEXT("Zoom is retained by repeated settings updates"),FMath::Abs(A->CameraBoom->TargetArmLength-(Start-A->Settings->CameraZoomStep))<.1f);
+ A->Zoom(FInputActionValue(-2.f));for(int I=0;I<60;I++)A->Tick(1.f/60);TestTrue(TEXT("Wheel down moves the camera farther away"),A->CameraBoom->TargetArmLength>Start);
+ A->Zoom(FInputActionValue(100.f));A->ApplySettings();TestEqual(TEXT("Near target clamps"),A->Settings->CameraDistance+A->CameraZoomOffset,A->Settings->CameraMinDistance);
+ A->Zoom(FInputActionValue(-100.f));TestEqual(TEXT("Far target clamps"),A->Settings->CameraDistance+A->CameraZoomOffset,A->Settings->CameraMaxDistance);
+ const float Offset=A->CameraZoomOffset;PC->SetIgnoreLookInput(true);A->Zoom(FInputActionValue(1.f));TestEqual(TEXT("Blocked/loading input cannot zoom"),A->CameraZoomOffset,Offset);PC->ResetIgnoreLookInput();PC->bPauseMenu=true;A->Zoom(FInputActionValue(1.f));TestEqual(TEXT("Pause menu cannot zoom"),A->CameraZoomOffset,Offset);
+ GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
+}
+#endif

@@ -251,7 +251,8 @@ void UWardrobeMenu::StartGame(){
  if(!ChoiceReady(I)){Message=TEXT("请先选择已配置的地图");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
  const auto& Item=Data->Levels[I];
  if(!FPackageName::DoesPackageExist(Item.Level.ToSoftObjectPath().GetLongPackageName())){Message=TEXT("目标地图不存在，或没有加入打包");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
- if(Loading->TravelToLevel(Item.Level,Data,Item.LoadingBackground,Item.Label,TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"))){
+ if(Loading->TravelToLevel(Item.Level,Data,Item.LoadingBackground,Item.Label,TEXT("game=/Game/BluePrint/ALS/Game/BP_ALSGameMode.BP_ALSGameMode_C"))){
+  if(auto* S=Session()){S->ExplorationMenuData=Data;const FString Package=UWorld::RemovePIEPrefix(GetWorld()->GetOutermost()->GetName());S->ExplorationReturnLevel=TSoftObjectPtr<UWorld>(FSoftObjectPath(Package+TEXT(".")+FPackageName::GetLongPackageAssetName(Package)));}
   if(SlateMenu)SlateMenu->CancelPointerGesture();
   if(IsValid(StationController))StationController->SetPreviewEnabled(false);
   PlayUISound(EWardrobeUISound::StartGame);
@@ -339,7 +340,18 @@ void UWardrobeMenu::NativeTick(const FGeometry& G,float Dt){
   Showcase=StationController->GetActiveCharacter();
   if(!StationController->IsTransitioning()&&StationController->CurrentStation!=INDEX_NONE)if(auto* S=Session())S->Mode=StationController->CurrentStation;
  }
+#if WITH_EDITOR
+ if(FParse::Param(FCommandLine::Get(),TEXT("WardrobeLocomotionMenuQA")))if(auto* S=Session()){
+  static int QAVisits=0;static double QATime=0;
+  if(QATime==0){QATime=FPlatformTime::Seconds();++QAVisits;UE_LOG(LogTemp,Display,TEXT("ALS68_MENU_QA visit=%d menuMap=%d controller=%s pawn=%s"),QAVisits,IsMenuMap(),*GetOwningPlayer()->GetClass()->GetName(),*GetNameSafe(GetOwningPlayer()->GetPawn()));}
+  if(LoadingActive&&QAVisits>1)QATime=FPlatformTime::Seconds();
+  if(QAVisits==1&&FPlatformTime::Seconds()-QATime>5){
+   Login(TEXT("旅人"));for(int I=0;Data&&I<Data->Levels.Num();I++)if(Data->Levels[I].Level.ToSoftObjectPath().GetLongPackageName()==TEXT("/Game/BluePrint/ALS/Maps/L_ALSFirstDemo")){SelectChoice(I);StartGame();break;}
+   QATime=0;QAVisits=1;
+  }else if(QAVisits>1&&FPlatformTime::Seconds()-QATime>5){UE_LOG(LogTemp,Display,TEXT("ALS68_MENU_RETURN_OK loggedIn=%d menuMap=%d"),S->LoggedIn,IsMenuMap());FPlatformMisc::RequestExit(false);}
+ }
+#endif
  if(!LoadingActive&&NoticeTime>0){NoticeTime-=Dt;if(NoticeTime<=0)Message.Empty();}
 }
 AWardrobeMenuGameMode::AWardrobeMenuGameMode(){DefaultPawnClass=nullptr;MenuClass=UWardrobeMenu::StaticClass();}
-void AWardrobeMenuGameMode::BeginPlay(){Super::BeginPlay();if(auto* PC=UGameplayStatics::GetPlayerController(this,0)){Menu=CreateWidget<UWardrobeMenu>(PC,MenuClass);if(Menu){if(MenuData)Menu->Data=MenuData;Menu->AddToViewport(80);}}UE_LOG(LogTemp,Display,TEXT("WARDROBE_UI_READY"));}
+void AWardrobeMenuGameMode::BeginPlay(){Super::BeginPlay();if(auto* PC=UGameplayStatics::GetPlayerController(this,0)){Menu=CreateWidget<UWardrobeMenu>(PC,MenuClass);if(Menu){if(MenuData)Menu->Data=MenuData;else if(auto* S=GetGameInstance()->GetSubsystem<UWardrobeSession>())if(S->ExplorationMenuData)Menu->Data=S->ExplorationMenuData;Menu->AddToViewport(80);}}UE_LOG(LogTemp,Display,TEXT("WARDROBE_UI_READY"));}
