@@ -36,11 +36,11 @@ bool AWardrobeShowcase::BeginLimbDrag(const FVector& Origin,const FVector& Direc
  if(Pick==INDEX_NONE)return false;
  const auto& R=P->LimbDrags[Pick];
  ClearLimbDrag();StopPhysicsTouch();ActiveLimb=Pick;
+ LimbCursorOrigin=Origin;LimbCursorDirection=Ray;bHasLimbCursorRay=true;
  LimbStartWorld=Character->GetSocketLocation(R.EndBone);LimbPlanePoint=Origin+Ray*Best;LimbPlaneNormal=Ray;
  // Camera-facing plane; preserve the original click offset so the endpoint never snaps to the pointer.
  LimbScreenRight=FVector::CrossProduct(Ray,FVector::UpVector).GetSafeNormal();
  if(LimbScreenRight.IsNearlyZero())LimbScreenRight=Character->GetRightVector();
- LimbScreenUp=FVector::CrossProduct(LimbScreenRight,Ray).GetSafeNormal();
  const FVector Upper=Character->GetSocketLocation(R.UpperBone),Joint=Character->GetSocketLocation(R.JointBone);
  const FVector Line=(LimbStartWorld-Upper).GetSafeNormal();LimbPole=Joint-Upper;LimbPole-=Line*FVector::DotProduct(LimbPole,Line);
  if(!LimbPole.Normalize()){LimbPole=Character->GetComponentTransform().TransformVectorNoScale(FVector::ForwardVector);LimbPole-=Line*FVector::DotProduct(LimbPole,Line);if(!LimbPole.Normalize())LimbPole=LimbScreenRight;}
@@ -48,17 +48,20 @@ bool AWardrobeShowcase::BeginLimbDrag(const FVector& Origin,const FVector& Direc
 }
 void AWardrobeShowcase::UpdateLimbDrag(const FVector& Origin,const FVector& Direction){
  if(!IsLimbDragging())return;const auto* P=GetInteractionProfile();
- if(!bInteractionEnabled||IsInteracting()||!P||!P->LimbDrags.IsValidIndex(ActiveLimb)||!P->LimbDrags[ActiveLimb].bEnabled){ReleaseLimbDrag();return;}
+ if(!bInteractionEnabled||IsInteracting()||!Character||!P||!P->LimbDrags.IsValidIndex(ActiveLimb)||!P->LimbDrags[ActiveLimb].bEnabled){ReleaseLimbDrag();return;}
+ // Keep the actual pointer ray, independent of drag sensitivity/distance clamping.
+ if(Direction.IsNearlyZero())return;
+ LimbCursorOrigin=Origin;LimbCursorDirection=Direction.GetSafeNormal();bHasLimbCursorRay=true;
  const double Dot=FVector::DotProduct(Direction,LimbPlaneNormal);if(FMath::Abs(Dot)<KINDA_SMALL_NUMBER)return;
  const double T=FVector::DotProduct(LimbPlanePoint-Origin,LimbPlaneNormal)/Dot;if(T<=0)return;
  const auto& R=P->LimbDrags[ActiveLimb];const float Scale=Character->GetComponentScale().GetAbsMax();
  LimbTargetDelta=((Origin+Direction*T-LimbPlanePoint)*FMath::Clamp(R.DragSensitivity,.01f,4.f)).GetClampedToMaxSize(FMath::Max(1.f,R.MaxDistance)*Scale);
 }
 void AWardrobeShowcase::ReleaseLimbDrag(){if(IsLimbDragging()){bLimbReturning=true;LimbReturnAge=0;}}
-void AWardrobeShowcase::ClearLimbDrag(){ActiveLimb=INDEX_NONE;bLimbReturning=false;LimbReturnAge=0;LimbDelta=LimbTargetDelta=FVector::ZeroVector;}
+void AWardrobeShowcase::ClearLimbDrag(){ActiveLimb=INDEX_NONE;bLimbReturning=false;bHasLimbCursorRay=false;LimbReturnAge=0;LimbDelta=LimbTargetDelta=FVector::ZeroVector;}
 void AWardrobeShowcase::TickLimbDrag(float Dt){
  const auto* P=GetInteractionProfile();
- if(!bInteractionEnabled||IsInteracting()||!P){ClearLimbDrag();return;}
+ if(!bInteractionEnabled||IsInteracting()||!Character||!P){ClearLimbDrag();return;}
  if(HasLimbPose()){
   if(!P->LimbDrags.IsValidIndex(ActiveLimb)||!P->LimbDrags[ActiveLimb].bEnabled){ClearLimbDrag();return;}
   const auto& R=P->LimbDrags[ActiveLimb];
@@ -72,12 +75,10 @@ void AWardrobeShowcase::TickLimbDrag(float Dt){
 }
 FWardrobeLimbSnapshot AWardrobeShowcase::GetLimbSnapshot() const{
  FWardrobeLimbSnapshot S;const auto* P=GetInteractionProfile();
- if(!bInteractionEnabled||!P||!P->LimbDrags.IsValidIndex(ActiveLimb))return S;
+ if(!bInteractionEnabled||!Character||!P||!P->LimbDrags.IsValidIndex(ActiveLimb))return S;
  S.Settings=P->LimbDrags[ActiveLimb];
  const float T=bLimbReturning?FMath::Clamp(LimbReturnAge/FMath::Max(.001f,S.Settings.ReturnTime),0.f,1.f):0.f;
  S.Alpha=1.f-T*T*(3.f-2.f*T);S.TargetWorld=LimbStartWorld+LimbDelta;S.PoleDirection=LimbPole;
- S.Direction=FVector2D(FVector::DotProduct(LimbDelta,LimbScreenRight),FVector::DotProduct(LimbDelta,LimbScreenUp));
- S.Force=FMath::Clamp(float(LimbDelta.Size())/FMath::Max(1.f,S.Settings.MaxDistance*Character->GetComponentScale().GetAbsMax()),0.f,1.f)*S.Alpha;
  return S;
 }
 float AWardrobeShowcase::GetLimbGroundSuppression(FName Foot) const{const auto S=GetLimbSnapshot();return S.Settings.bFoot&&S.Settings.EndBone==Foot?S.Alpha:0.f;}

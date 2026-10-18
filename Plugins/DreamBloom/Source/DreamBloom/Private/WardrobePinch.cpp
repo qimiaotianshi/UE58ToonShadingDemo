@@ -98,7 +98,7 @@ bool AWardrobeShowcase::BeginPinch(const FVector& Origin,const FVector& Directio
  if(PinchStates.Num()!=Profile->PinchRegions.Num()){ClearPinch();PinchStates.SetNum(Profile->PinchRegions.Num());}
  const auto& Region=Profile->PinchRegions[Selected];auto& State=PinchStates[Selected];
  State.Bone=Region.Bone;State.Target=State.Position;State.bReturning=false;
- ActivePinch=Selected;PinchPlanePoint=Origin+Ray*Best;PinchPlaneNormal=Ray;PinchStartRotation=Character->GetSocketQuaternion(Region.Bone);
+ PinchPeakDragDistance=0;ActivePinch=Selected;PinchPlanePoint=Origin+Ray*Best;PinchPlaneNormal=Ray;PinchStartRotation=Character->GetSocketQuaternion(Region.Bone);
  State.StartComponentRotation=Character->GetComponentQuat().Inverse()*PinchStartRotation;
  PinchGrabOffset=PinchStartRotation.RotateVector(State.Position);
  StopPhysicsTouch();StartPinchAudio(Region);return true;
@@ -110,6 +110,7 @@ void AWardrobeShowcase::UpdatePinch(const FVector& Origin,const FVector& Directi
  const double Distance=FVector::DotProduct(PinchPlanePoint-Origin,PinchPlaneNormal)/Dot;if(Distance<=0)return;
  auto& State=PinchStates[ActivePinch];
  const FVector MouseDelta=Origin+Direction*Distance-PinchPlanePoint;
+ PinchPeakDragDistance=FMath::Max(PinchPeakDragDistance,float(MouseDelta.Size()));
  // Measure pointer movement before clamping stretch, so motion at maximum pull still sounds.
  if(FVector::DistSquared(MouseDelta,PinchLastMouseDelta)>=FMath::Square(.03f)){PinchMotionAge=0;PinchLastMouseDelta=MouseDelta;}
  const FVector NewOffset=PinchStartRotation.UnrotateVector(MouseDelta)*Region.AxisScale*FMath::Clamp(Region.DragSensitivity,.01f,4.f);
@@ -120,19 +121,20 @@ void AWardrobeShowcase::ReleasePinch(){
  const auto* Profile=GetInteractionProfile();
  StopPinchAudio();
  for(auto& State:PinchStates){State.ReleaseReaction=State.Position;State.ReturnAge=0;State.bReturning=true;}
- if(Profile&&Profile->PinchRegions.IsValidIndex(ActivePinch)){
+ if(Profile&&Profile->PinchRegions.IsValidIndex(ActivePinch)&&PinchPeakDragDistance>=FMath::Max(0.f,Profile->PinchRegions[ActivePinch].ReleaseTriggerDistance)){
   const auto& R=Profile->PinchRegions[ActivePinch];FWardrobeSoundEntry Release;Release.Sound=PinchRoundReleaseSound;PlayPinchSound(Release,EWardrobeUISound::PinchRelease);PinchRoundReleaseSound.Reset();
   auto* Clip=R.ReleaseAnimation.LoadSynchronous();
-  if(Clip&&Character->GetSkeletalMeshAsset()&&Clip->GetSkeleton()==Character->GetSkeletalMeshAsset()->GetSkeleton()&&Clip->GetPlayLength()>0){
+  if(Clip&&IsValid(Character)&&Character->GetSkeletalMeshAsset()&&Clip->GetSkeleton()==Character->GetSkeletalMeshAsset()->GetSkeleton()&&Clip->GetPlayLength()>0){
    ReleaseAnimation=Clip;ReleaseAnimationAge=0;ReleaseAnimationBlendTime=FMath::Clamp(R.ReleaseBlendTime,0.f,3.f);++ReleaseAnimationSerial;
   }
  }
+ PinchRoundReleaseSound.Reset();PinchPeakDragDistance=0;
  ActivePinch=INDEX_NONE;for(auto& State:PinchStates)State.Target=FVector::ZeroVector;
 }
 void AWardrobeShowcase::ClearPinch(){
  StopPinchAudio();ReleaseAnimation=nullptr;ReleaseAnimationAge=0;PinchRoundReleaseSound.Reset();
  for(FName Name:PinchDrivenCurves)if(IsValid(Character))Character->SetMorphTarget(Name,0);PinchDrivenCurves.Reset();
- ActivePinch=INDEX_NONE;PinchStates.Reset();
+ ActivePinch=INDEX_NONE;PinchPeakDragDistance=0;PinchStates.Reset();
 }
 void AWardrobeShowcase::TickPinch(float Dt){
  const auto* Profile=GetInteractionProfile();if(!bInteractionEnabled||IsInteracting()||!Profile){if(!PinchStates.IsEmpty())ClearPinch();return;}

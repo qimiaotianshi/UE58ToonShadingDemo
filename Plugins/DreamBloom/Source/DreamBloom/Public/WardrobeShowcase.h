@@ -124,7 +124,10 @@ private:
  float LimbReturnAge=0;
  FVector LimbStartWorld=FVector::ZeroVector,LimbDelta=FVector::ZeroVector,LimbTargetDelta=FVector::ZeroVector;
  FVector LimbPlanePoint=FVector::ZeroVector,LimbPlaneNormal=FVector::ForwardVector,LimbPole=FVector::ForwardVector;
- FVector LimbScreenRight=FVector::RightVector,LimbScreenUp=FVector::UpVector;
+ FVector LimbScreenRight=FVector::RightVector;
+ // Slate owns mouse capture during dragging; viewport cursor polling can be stale.
+ FVector LimbCursorOrigin=FVector::ZeroVector,LimbCursorDirection=FVector::ForwardVector;
+ bool bHasLimbCursorRay=false;
  float SequencePhysicsWeight=1.f;
  float PhysicsBlendFrom=1.f,PhysicsBlendTarget=1.f,PhysicsBlendAge=0.f,PhysicsBlendDuration=0.f;
  uint8 PendingSequenceSwitch=0; // 1 = prepared reaction, 2 = return to default
@@ -138,6 +141,7 @@ private:
  FVector PinchPlanePoint=FVector::ZeroVector,PinchPlaneNormal=FVector::ForwardVector;
  FQuat PinchStartRotation=FQuat::Identity;
  FVector PinchGrabOffset=FVector::ZeroVector;
+ float PinchPeakDragDistance=0;
  // Only curves authored in Body reaction clips; cheek stretching remains bone-only.
  TSet<FName> PinchDrivenCurves;
  UPROPERTY(Transient) TObjectPtr<UAudioComponent> PinchGrabAudio;

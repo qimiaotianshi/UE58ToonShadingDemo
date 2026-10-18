@@ -51,21 +51,18 @@ bool UWardrobePinchEditorTools::AddReleaseBlendNode(UAnimBlueprint* BP){
 bool UWardrobePinchEditorTools::AddLimbDragNodes(UAnimBlueprint* BP){
 #if WITH_EDITOR
  if(!BP)return false;
- UAnimGraphNode_WardrobeLimbReaction* Body=nullptr;UAnimGraphNode_WardrobeLimbIK* ExistingIK=nullptr;
- UAnimGraphNode_WardrobeRelease* Release=nullptr;UAnimGraphNode_WardrobeFootIK* Foot=nullptr;UEdGraph* Graph=nullptr;
+ UAnimGraphNode_WardrobeLimbIK* ExistingIK=nullptr;
+ UAnimGraphNode_WardrobeFootIK* Foot=nullptr;UEdGraph* Graph=nullptr;
  for(const auto& G:BP->FunctionGraphs)for(const auto& N:G->Nodes){
-  if(auto* V=Cast<UAnimGraphNode_WardrobeLimbReaction>(N.Get()))Body=V;
   if(auto* V=Cast<UAnimGraphNode_WardrobeLimbIK>(N.Get()))ExistingIK=V;
-  if(auto* V=Cast<UAnimGraphNode_WardrobeRelease>(N.Get())){Release=V;Graph=G.Get();}
-  if(auto* V=Cast<UAnimGraphNode_WardrobeFootIK>(N.Get()))Foot=V;
+  if(auto* V=Cast<UAnimGraphNode_WardrobeFootIK>(N.Get())){Foot=V;Graph=G.Get();}
  }
- if(Body&&ExistingIK)return true;
- if(!Release||!Foot||Foot->GetGraph()!=Graph)return false;
+ if(ExistingIK)return true;
+ if(!Foot||!Graph)return false;
  auto Insert=[&](UEdGraphNode* Before,UEdGraphNode* Added){
   for(auto* Out:Before->Pins)if(Out->Direction==EGPD_Output){auto Links=Out->LinkedTo;for(auto* In:Links){Out->BreakLinkTo(In);for(auto* P:Added->Pins)if(P->Direction==EGPD_Output)if(!Added->GetSchema()->TryCreateConnection(P,In))return false;}}
   return WardrobePhysicsTools::Link(Before,Added);
  };
- if(!Body){Body=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeLimbReaction>(Graph,Release->NodePosX+100);Body->NodePosY=250;if(!Insert(Release,Body))return false;}
  if(!ExistingIK){ExistingIK=WardrobePhysicsTools::Add<UAnimGraphNode_WardrobeLimbIK>(Graph,Foot->NodePosX+100);ExistingIK->NodePosY=250;if(!Insert(Foot,ExistingIK))return false;}
  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);FKismetEditorUtilities::CompileBlueprint(BP);return BP->Status!=BS_Error;
 #else
@@ -155,4 +152,5 @@ bool UWardrobePinchEditorTools::SetPinchBaseAnimation(UAnimBlueprint* BP,UAnimSe
 #endif
  return false;
 }
+
 

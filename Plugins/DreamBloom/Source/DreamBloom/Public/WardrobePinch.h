@@ -51,6 +51,8 @@ struct DREAMBLOOM_API FWardrobePinchRegion {
  /** Repeats while held. Volume reaches its configured maximum at MaxDistance. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds MoveSound;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Audio") FWardrobePinchSounds ReleaseSound;
+ /** Peak mouse displacement on the world-space drag plane during this grab. Zero always triggers. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0",Units="cm",ToolTip="Release animation and ReleaseSound require this peak mouse drag distance. Measured in world cm before sensitivity and stretch limits; 0 always triggers.")) float ReleaseTriggerDistance=5.f;
  /** Blends directly from the held pose, then back to the continuously running default pose. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release") TSoftObjectPtr<UAnimSequence> ReleaseAnimation;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Release",meta=(ClampMin="0",ClampMax="3",Units="s")) float ReleaseBlendTime=.25f;

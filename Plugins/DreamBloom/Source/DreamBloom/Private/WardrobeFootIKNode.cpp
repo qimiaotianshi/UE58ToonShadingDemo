@@ -20,7 +20,8 @@ bool FAnimNode_WardrobeFootIK::BuildContactData(USkeletalMesh* Mesh){
  LeftSoleNormal=FootRef[0].InverseTransformVectorNoScale(FVector::UpVector);RightSoleNormal=FootRef[1].InverseTransformVectorNoScale(FVector::UpVector);
  auto* Render=Mesh->GetResourceForRendering();if(!Render||Render->LODRenderData.IsEmpty())return false;
  const auto& LOD=Render->LODRenderData[0];const auto& Positions=LOD.StaticVertexBuffers.PositionVertexBuffer;const auto& W=LOD.SkinWeightVertexBuffer;
- if(!Positions.GetVertexData()||!W.GetDataVertexBuffer()->GetWeightData())return false;
+ const auto* WeightData=W.GetDataVertexBuffer();
+ if(!Positions.GetVertexData()||!WeightData||!WeightData->GetWeightData())return false;
  TArray<FVector> Candidates[2];float MinZ[2]={BIG_NUMBER,BIG_NUMBER};
  for(const auto& Section:LOD.RenderSections)for(uint32 V=Section.BaseVertexIndex;V<Section.BaseVertexIndex+Section.NumVertices;V++){
   float FootWeight[2]={0,0};
@@ -50,7 +51,7 @@ bool FAnimNode_WardrobeFootIK::BuildContactData(USkeletalMesh* Mesh){
 }
 
 void FAnimNode_WardrobeFootIK::Initialize_AnyThread(const FAnimationInitializeContext& C){
- FAnimNode_SkeletalControlBase::Initialize_AnyThread(C);PelvisOffset=0;bSnap=true;
+ FAnimNode_SkeletalControlBase::Initialize_AnyThread(C);PelvisOffset=0;bSnap=true;MeshWorld=FTransform::Identity;
  for(int I=0;I<2;I++){SmoothedOffset[I]=FVector::ZeroVector;SmoothedRotation[I]=FQuat::Identity;Ground[I]=FGroundSample();}
 }
 void FAnimNode_WardrobeFootIK::UpdateInternal(const FAnimationUpdateContext& C){DeltaTime=C.GetDeltaTime();}
@@ -59,11 +60,15 @@ void FAnimNode_WardrobeFootIK::InitializeBoneReferences(const FBoneContainer& B)
 }
 bool FAnimNode_WardrobeFootIK::IsValidToEvaluate(const USkeleton*,const FBoneContainer& B){
  if(!Pelvis.IsValidToEvaluate(B)||!LeftFoot.IsValidToEvaluate(B)||!RightFoot.IsValidToEvaluate(B))return false;
+ // FBoneReference validity does not guarantee its cached compact index is usable.
+ auto ValidIndex=[&](FCompactPoseBoneIndex I){return I.GetInt()>=0&&I.GetInt()<B.GetCompactPoseNumBones();};
+ const auto PelvisIndex=Pelvis.GetCompactPoseIndex(B);if(!ValidIndex(PelvisIndex))return false;
  for(const auto* Foot:{&LeftFoot,&RightFoot}){
-  auto Knee=B.GetParentBoneIndex(Foot->GetCompactPoseIndex(B));if(Knee==INDEX_NONE)return false;
-  auto Hip=B.GetParentBoneIndex(Knee);if(Hip==INDEX_NONE)return false;
+  const auto FootIndex=Foot->GetCompactPoseIndex(B);if(!ValidIndex(FootIndex))return false;
+  auto Knee=B.GetParentBoneIndex(FootIndex);if(!ValidIndex(Knee))return false;
+  auto Hip=B.GetParentBoneIndex(Knee);if(!ValidIndex(Hip))return false;
   auto Ancestor=Hip;bool Found=false;
-  while(Ancestor!=INDEX_NONE){if(Ancestor==Pelvis.GetCompactPoseIndex(B)){Found=true;break;}Ancestor=B.GetParentBoneIndex(Ancestor);}
+  while(ValidIndex(Ancestor)){if(Ancestor==PelvisIndex){Found=true;break;}Ancestor=B.GetParentBoneIndex(Ancestor);}
   if(!Found)return false;
  }
  return true;
@@ -100,12 +105,17 @@ void FAnimNode_WardrobeFootIK::PreUpdate(const UAnimInstance* Instance){
 }
 void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& O,TArray<FBoneTransform>& Out){
  const auto& Bones=O.Pose.GetPose().GetBoneContainer();const FBoneReference* Feet[]={&LeftFoot,&RightFoot};
+ const auto PelvisIndex=Pelvis.GetCompactPoseIndex(Bones);
+ if(!O.Pose.GetPose().IsValidIndex(PelvisIndex))return;
  const float A=bSnap||BlendTime<=0?1.f:1.f-FMath::Exp(-DeltaTime*4.6f/BlendTime);
+ const bool bWorldValid=MeshWorld.GetRotation().IsNormalized();
  float RequestedPelvis=0;bool Any=false;
  for(int I=0;I<2;I++){
-  const auto F=Feet[I]->GetCompactPoseIndex(Bones);const FTransform& Foot=O.Pose.GetComponentSpaceTransform(F);
+  const auto F=Feet[I]->GetCompactPoseIndex(Bones);
+  if(!O.Pose.GetPose().IsValidIndex(F))continue;
+  const FTransform& Foot=O.Pose.GetComponentSpaceTransform(F);
   FVector Offset=FVector::ZeroVector;FQuat Rotation=FQuat::Identity;
-  if(bEnabled&&Ground[I].bHit){
+  if(bEnabled&&bWorldValid&&Ground[I].bHit){
    const FVector WorldFoot=MeshWorld.TransformPosition(Foot.GetLocation());const float Scale=MeshWorld.GetScale3D().GetAbsMax();
    // Component-space lift is independent of Actor Z. Moving the person is not a kick.
    const float Reference=I==0?LeftReferenceHeight:RightReferenceHeight;
@@ -132,9 +142,14 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  }
  PelvisOffset=FMath::Lerp(PelvisOffset,FMath::Clamp(RequestedPelvis,-MaxPelvisOffset,MaxPelvisOffset),A);bSnap=false;
  const FVector Shift(0,0,PelvisOffset);
- FTransform P=O.Pose.GetComponentSpaceTransform(Pelvis.GetCompactPoseIndex(Bones));P.AddToTranslation(Shift);Out.Emplace(Pelvis.GetCompactPoseIndex(Bones),P);
+ FTransform P=O.Pose.GetComponentSpaceTransform(PelvisIndex);P.AddToTranslation(Shift);Out.Emplace(PelvisIndex,P);
  for(int I=0;I<2;I++){
-  const auto F=Feet[I]->GetCompactPoseIndex(Bones),K=Bones.GetParentBoneIndex(F),H=Bones.GetParentBoneIndex(K);
+  const auto F=Feet[I]->GetCompactPoseIndex(Bones);
+  if(!O.Pose.GetPose().IsValidIndex(F))continue;
+  const auto K=Bones.GetParentBoneIndex(F);
+  if(!O.Pose.GetPose().IsValidIndex(K))continue;
+  const auto H=Bones.GetParentBoneIndex(K);
+  if(!O.Pose.GetPose().IsValidIndex(H))continue;
   FTransform Hip=O.Pose.GetComponentSpaceTransform(H),Knee=O.Pose.GetComponentSpaceTransform(K),Foot=O.Pose.GetComponentSpaceTransform(F);
   const FVector Target=Foot.GetLocation()+SmoothedOffset[I];const FQuat FootRot=(SmoothedRotation[I]*Foot.GetRotation()).GetNormalized();
   FVector Line=(Foot.GetLocation()-Hip.GetLocation()).GetSafeNormal();FVector Bend=Knee.GetLocation()-Hip.GetLocation();Bend-=Line*FVector::DotProduct(Bend,Line);

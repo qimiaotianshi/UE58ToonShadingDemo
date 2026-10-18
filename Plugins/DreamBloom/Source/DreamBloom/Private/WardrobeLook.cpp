@@ -14,16 +14,19 @@ FTransform ReferenceComponent(const USkeletalMesh* Mesh,FName Bone){
 }
 }
 void AWardrobeShowcase::TickCursorLook(float Dt){
+ // Use the latest deprojected Slate drag event while capture is held. The
+ // PlayerController viewport position may stay at the mouse-down location.
+ if(IsLimbDragging()&&bHasLimbCursorRay){UpdateCursorLook(Dt,LimbCursorOrigin,LimbCursorDirection,true);return;}
  auto* PC=GetWorld()?GetWorld()->GetFirstPlayerController():nullptr;FVector O,D;float X=0,Y=0;
  bool Valid=PC&&PC->GetMousePosition(X,Y)&&PC->DeprojectScreenPositionToWorld(X,Y,O,D);
  if(PC){int32 W=0,H=0;PC->GetViewportSize(W,H);Valid&=X>=0&&Y>=0&&X<W&&Y<H;
-  Valid&=!PC->IsInputKeyDown(EKeys::LeftMouseButton)&&!PC->IsInputKeyDown(EKeys::RightMouseButton)&&!PC->IsInputKeyDown(EKeys::MiddleMouseButton);
+  Valid&=(!PC->IsInputKeyDown(EKeys::LeftMouseButton)||IsLimbDragging())&&!PC->IsInputKeyDown(EKeys::RightMouseButton)&&!PC->IsInputKeyDown(EKeys::MiddleMouseButton);
  }
  UpdateCursorLook(Dt,O,D,Valid);
 }
 void AWardrobeShowcase::UpdateCursorLook(float Dt,const FVector& Origin,const FVector& Ray,bool bHasPointer){
  const auto* Profile=GetInteractionProfile();FVector2D Target=FVector2D::ZeroVector;
- bool Busy=!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||HasLimbPose()||IsPinching()||bPhysicsDragging||bPhysicsTouchActive;
+ bool Busy=!bInteractionEnabled||IsInteracting()||IsReleaseAnimationPlaying()||IsPinching()||bPhysicsDragging||bPhysicsTouchActive;
  bool bPinchReturning=false;float GazeBlend=1.f;
  for(int32 I=0;I<PinchStates.Num();I++){
   const auto& State=PinchStates[I];
@@ -34,7 +37,8 @@ void AWardrobeShowcase::UpdateCursorLook(float Dt,const FVector& Origin,const FV
    GazeBlend=FMath::Min(GazeBlend,T*T*(3.f-2.f*T));
   }else Busy|=State.Position.SizeSquared()>.0001;
  }
- if(Busy||!bHasPointer)CursorLookIdleAge=0;else if(bPinchReturning)CursorLookIdleAge=Profile->CursorLook.IdleDelay;else CursorLookIdleAge+=FMath::Max(0.f,Dt);
+ // Active limb feedback and its recovery keep gaze engaged without a new idle wait.
+ if(Busy||!bHasPointer)CursorLookIdleAge=0;else if(Profile&&(HasLimbPose()||bPinchReturning))CursorLookIdleAge=Profile->CursorLook.IdleDelay;else CursorLookIdleAge+=FMath::Max(0.f,Dt);
  if(Profile&&Profile->CursorLook.bEnabled&&Character&&Character->GetSkeletalMeshAsset()&&!Busy&&bHasPointer&&CursorLookIdleAge>=Profile->CursorLook.IdleDelay){
   const auto& S=Profile->CursorLook;const auto* Mesh=Character->GetSkeletalMeshAsset();
   if(Mesh->GetRefSkeleton().FindBoneIndex(S.AnchorBone)!=INDEX_NONE){

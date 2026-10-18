@@ -20,7 +20,7 @@
 #include "MovieScene.h"
 #include "MovieSceneBindingOverrides.h"
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeLimbTest,"DreamBloom.Limbs.RealSequenceDragReactionAndGround",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeLimbTest,"DreamBloom.Limbs.RealSequenceDragAndGround",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FWardrobeLimbTest::RunTest(const FString&){
  auto* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/WardrobeFullBodyPinch42/SK_DaniyaFullBodyPinch.SK_DaniyaFullBodyPinch"));
  auto* BP=LoadObject<UAnimBlueprint>(nullptr,TEXT("/Game/WardrobeFullBodyPinch42/AB_FullBodySequencePinch.AB_FullBodySequencePinch"));
@@ -69,12 +69,85 @@ bool FWardrobeLimbTest::RunTest(const FString&){
   TestTrue(Label+TEXT(" can grab again after recovery"),A->BeginLimbDrag(Origin,Ray));A->ReleaseLimbDrag();Steps(4);const FVector Regrab=A->Character->GetSocketLocation(R.EndBone);
   TestTrue(Label+TEXT(" can regrab while recovering"),A->BeginLimbDrag(Regrab+FVector(0,100,0),Ray));Eval();TestTrue(Label+TEXT(" regrab preserves endpoint"),FVector::Distance(Regrab,A->Character->GetSocketLocation(R.EndBone))<.3f);A->ClearLimbDrag();Steps(90);
  }
- // Test left/right animation direction on the actual running source pose.
- auto& R=Data->Characters[0].LimbDrags[0];Steps(90);const FVector Hand=A->Character->GetSocketLocation(R.EndBone),Origin=Hand+FVector(0,100,0),Head=A->Character->GetSocketLocation(TEXT("頭"));
- for(float Direction:{-1.f,1.f}){A->ClearLimbDrag();Steps(90);TestTrue(TEXT("Direction grab"),A->BeginLimbDrag(Origin,FVector(0,-1,0)));A->UpdateLimbDrag(Origin+FVector(Direction*20,0,0),FVector(0,-1,0));Steps(90);const FVector Delta=A->Character->GetSocketLocation(TEXT("頭"))-Head;AddInfo(FString::Printf(TEXT("BODY direction=%.0f headDelta=%s"),Direction,*Delta.ToString()));TestTrue(TEXT("Body follows horizontal mouse force"),Delta.X*Direction>.05f);}
- FQuat VerticalPoses[2];int VI=0;
- for(float Direction:{-1.f,1.f}){A->ClearLimbDrag();Steps(90);TestTrue(TEXT("Vertical grab"),A->BeginLimbDrag(Origin,FVector(0,-1,0)));A->UpdateLimbDrag(Origin+FVector(0,0,Direction*20),FVector(0,-1,0));Steps(90);VerticalPoses[VI++]=A->Character->GetSocketQuaternion(TEXT("上半身"));}
- TestTrue(TEXT("Up and down use distinct authored body poses"),VerticalPoses[0].AngularDistance(VerticalPoses[1])>.01f);
+ // Dragging affects the IK chain, not authored torso feedback clips.
+ auto& R=Data->Characters[0].LimbDrags[0];Steps(90);
+ const FVector Hand=A->Character->GetSocketLocation(R.EndBone),Origin=Hand+FVector(0,100,0);
+ const FQuat Torso=A->Character->GetSocketQuaternion(TEXT("上半身"));
+ for(float Direction:{-1.f,1.f}){
+  A->ClearLimbDrag();Steps(90);TestTrue(TEXT("IK-only grab"),A->BeginLimbDrag(Origin,FVector(0,-1,0)));
+  A->UpdateLimbDrag(Origin+FVector(Direction*20,0,0),FVector(0,-1,0));Steps(90);
+  TestTrue(TEXT("Limb dragging leaves source torso animation intact"),Torso.AngularDistance(A->Character->GetSocketQuaternion(TEXT("上半身")))<.001f);
+ }
+ for(const TCHAR* Name:{TEXT("BodyLeft"),TEXT("BodyRight"),TEXT("BodyUp"),TEXT("BodyDown"),TEXT("ReactionStrength")})
+  TestNull(FString(TEXT("Removed limb DA property "))+Name,FWardrobeLimbDrag::StaticStruct()->FindPropertyByName(Name));
+ // Gaze remains active during IK dragging and recovery.
+ auto& Look=Data->Characters[0].CursorLook;Look.bEnabled=true;Look.AnchorBone=TEXT("頭");Look.ForwardAxis=FVector(0,1,0);Look.UpAxis=FVector::UpVector;Look.IdleDelay=.8f;Look.FollowSpeed=4.f;
+ Look.Bones.Reset();for(auto Name:{FName(TEXT("頭")),FName(TEXT("首")),FName(TEXT("目_L")),FName(TEXT("目_R"))}){FWardrobeLookBone Bone;Bone.Bone=Name;Bone.Weight=Name==TEXT("首")?.2f:.45f;Look.Bones.Add(Bone);}
+ for(int I=0;I<4;I++){
+  A->ClearLimbDrag();Steps(90);
+  const FVector WristOrAnkle=A->Character->GetSocketLocation(Data->Characters[0].LimbDrags[I].EndBone);
+  const FVector PickOrigin=WristOrAnkle+FVector(0,100,0),PickRay(0,-1,0);
+  const FVector GazeOrigin=A->Character->GetSocketLocation(TEXT("頭"))+FVector(0,100,0),GazeRight=FVector(.3,-1,.15).GetSafeNormal(),GazeLeft=FVector(-.3,-1,-.15).GetSafeNormal();
+  for(int N=0;N<180;N++)A->UpdateCursorLook(1.f/60,GazeOrigin,GazeRight,false);
+  TestTrue(TEXT("Limb gaze grab starts"),A->BeginLimbDrag(PickOrigin,PickRay));
+  A->UpdateLimbDrag(PickOrigin+FVector(10,0,8),PickRay);Steps(90);
+  const FQuat BaseHead=A->Character->GetSocketQuaternion(TEXT("頭")),BaseNeck=A->Character->GetSocketQuaternion(TEXT("首")),BaseEye=A->Character->GetSocketQuaternion(TEXT("目_L"));
+  A->UpdateCursorLook(1.f/60,GazeOrigin,GazeRight,true);
+  TestTrue(TEXT("Held limb bypasses idle gaze delay"),A->GetCursorLookRotation(TEXT("頭")).GetAngle()>.001f);
+  for(int N=0;N<180;N++){A->UpdateCursorLook(1.f/60,GazeOrigin,GazeRight,true);Steps(1);}
+  TestTrue(TEXT("Head follows mouse during limb drag"),BaseHead.AngularDistance(A->Character->GetSocketQuaternion(TEXT("頭")))>.03f);
+  TestTrue(TEXT("Neck follows mouse during limb drag"),BaseNeck.AngularDistance(A->Character->GetSocketQuaternion(TEXT("首")))>.01f);
+  TestTrue(TEXT("Eye follows mouse during limb drag"),BaseEye.AngularDistance(A->Character->GetSocketQuaternion(TEXT("目_L")))>.03f);
+  const FQuat RightLook=A->GetCursorLookRotation(TEXT("頭"));
+  for(int N=0;N<180;N++){A->UpdateCursorLook(1.f/60,GazeOrigin,GazeLeft,true);Steps(1);}
+  TestTrue(TEXT("Dragged limb allows gaze direction changes"),RightLook.AngularDistance(A->GetCursorLookRotation(TEXT("頭")))>.1f);
+  TestTrue(TEXT("Gaze keeps limb IK active"),A->GetLimbSnapshot().Alpha>.99f);
+  A->ReleaseLimbDrag();A->TickLimbDrag(1.f/60);A->UpdateCursorLook(1.f/60,GazeOrigin,GazeLeft,true);Eval();
+  TestTrue(TEXT("Limb recovery continues gaze"),A->GetCursorLookRotation(TEXT("頭")).GetAngle()>.02f);
+  for(int N=0;N<180;N++){A->TickLimbDrag(1.f/60);A->UpdateCursorLook(1.f/60,GazeOrigin,GazeLeft,true);Eval();}
+  TestTrue(TEXT("After limb recovery gaze stays engaged"),A->GetCursorLookRotation(TEXT("頭")).GetAngle()>.02f);
+  for(int N=0;N<180;N++)A->UpdateCursorLook(1.f/60,GazeOrigin,GazeLeft,false);
+  TestTrue(TEXT("Missing mouse still fades limb gaze out"),A->GetCursorLookRotation(TEXT("頭")).Equals(FQuat::Identity,.001f));
+ }
+ // Exercise the production Tick path with no viewport mouse updates. Slate's
+ // deprojected movement rays must replace the original press ray on every move.
+ for(int I=0;I<4;I++){
+  A->ClearLimbDrag();Steps(90);
+  for(int N=0;N<180;N++)A->UpdateCursorLook(1.f/60,FVector::ZeroVector,FVector::ForwardVector,false);
+  const FVector End=A->Character->GetSocketLocation(Data->Characters[0].LimbDrags[I].EndBone);
+  const FVector Camera=A->Character->GetSocketLocation(TEXT("頭"))+FVector(0,100,0);
+  TestTrue(TEXT("Live cursor ray grab"),A->BeginLimbDrag(Camera,(End-Camera).GetSafeNormal()));
+  A->TickCursorLook(1.f/60);TestTrue(TEXT("Mouse-down ray initializes gaze"),A->GetCursorLookRotation(TEXT("頭")).GetAngle()>.001f);
+  FQuat Previous=FQuat::Identity;bool First=true;
+  for(float X:{-28.f,-12.f,12.f,28.f}){
+   const FVector CurrentRay=FVector(X,-100,0).GetSafeNormal();
+   A->UpdateLimbDrag(Camera,CurrentRay);
+   for(int N=0;N<120;N++){A->TickCursorLook(1.f/60);Steps(1);}
+   const FQuat Now=A->GetCursorLookRotation(TEXT("頭"));
+   if(!First)TestTrue(TEXT("Live mouse movement changes gaze through TickCursorLook"),Previous.AngularDistance(Now)>.025f);
+   Previous=Now;First=false;
+  }
+  const FQuat Still=A->GetCursorLookRotation(TEXT("頭"));
+  for(int N=0;N<60;N++){A->TickCursorLook(1.f/60);Steps(1);}
+  TestTrue(TEXT("Stationary captured pointer keeps the latest gaze target"),Still.AngularDistance(A->GetCursorLookRotation(TEXT("頭")))<.005f);
+  // Hand/foot reach limits must not freeze the pointer used by the head.
+  auto& DragSettings=Data->Characters[0].LimbDrags[I];const float SavedMax=DragSettings.MaxDistance;DragSettings.MaxDistance=1.f;
+  A->UpdateLimbDrag(Camera,FVector(-25,-100,12).GetSafeNormal());
+  for(int N=0;N<120;N++){A->TickCursorLook(1.f/60);Steps(1);}
+  const FQuat Limited=A->GetCursorLookRotation(TEXT("頭"));
+  A->UpdateLimbDrag(Camera,FVector(25,-100,-12).GetSafeNormal());
+  for(int N=0;N<120;N++){A->TickCursorLook(1.f/60);Steps(1);}
+  TestTrue(TEXT("Cursor gaze changes even when limb distance is clamped"),Limited.AngularDistance(A->GetCursorLookRotation(TEXT("頭")))>.1f);
+  DragSettings.MaxDistance=SavedMax;A->ClearLimbDrag();
+ }
+ Look.bEnabled=false;
+ // A component can disappear during teardown; none of the drag paths may dereference it.
+ auto* SavedCharacter=A->Character.Get();A->Character=nullptr;
+ TestEqual(TEXT("Missing character produces an inactive snapshot"),A->GetLimbSnapshot().Alpha,0.f);
+ A->UpdateLimbDrag(Origin,FVector(0,-1,0));TestFalse(TEXT("Missing character releases held limb"),A->IsLimbDragging());
+ A->TickLimbDrag(1.f/60);TestFalse(TEXT("Missing character clears recovery"),A->HasLimbPose());
+ Data->Characters[0].bDrawLimbDrags=true;A->TickLimbDrag(1.f/60);Data->Characters[0].bDrawLimbDrags=false;
+ A->Character=SavedCharacter;
  A->SetInteractionEnabled(false);TestFalse(TEXT("Switching station clears held limb and recovery"),A->HasLimbPose());
  A->SetInteractionEnabled(true);Data->Characters[0].LimbDrags[0].JointBone=NAME_None;TestFalse(TEXT("Invalid chain cannot start a drag"),A->BeginLimbDrag(Origin,FVector(0,-1,0)));
  Player->Stop();GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;

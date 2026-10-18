@@ -1,7 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "WardrobeLimbDrag.generated.h"
-class UAnimSequence;
 
 /** Explicit deform chain; twist/helper bones between these three bones are supported. */
 USTRUCT(BlueprintType)
@@ -20,12 +19,6 @@ struct DREAMBLOOM_API FWardrobeLimbDrag {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dragging",meta=(ClampMin="0.01",ClampMax="4")) float DragSensitivity=.65f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dragging",meta=(ClampMin="0",Units="s")) float FollowTime=.08f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dragging",meta=(ClampMin="0",Units="s")) float ReturnTime=.45f;
- /** First frame is neutral; last frame is maximum pull. Sample time follows drag strength. */
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyLeft;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyRight;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyUp;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction") TObjectPtr<UAnimSequence> BodyDown;
- UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Body Reaction",meta=(ClampMin="0",ClampMax="1")) float ReactionStrength=.65f;
 };
 
 // Game-thread snapshot copied by AnimBP nodes before worker evaluation.
@@ -33,6 +26,5 @@ struct DREAMBLOOM_API FWardrobeLimbSnapshot {
  FWardrobeLimbDrag Settings;
  FVector TargetWorld=FVector::ZeroVector;
  FVector PoleDirection=FVector::ForwardVector;
- FVector2D Direction=FVector2D::ZeroVector;
- float Alpha=0,Force=0;
+ float Alpha=0;
 };
