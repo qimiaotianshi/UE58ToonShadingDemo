@@ -1,4 +1,5 @@
 #include "WardrobeFootIKNode.h"
+#include "WardrobeLocomotion.h"
 #include "WardrobeShowcase.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -103,11 +104,13 @@ bool FAnimNode_WardrobeFootIK::IsValidToEvaluate(const USkeleton*,const FBoneCon
  return true;
 }
 void FAnimNode_WardrobeFootIK::PreUpdate(const UAnimInstance* Instance){
+ RuntimeGroundAlpha=1;bRuntimeInAir=false;
+ if(const auto* Locomotion=Cast<UWardrobeLocomotionAnim>(Instance)){RuntimeGroundAlpha=Locomotion->GroundIKAlpha;bRuntimeInAir=Locomotion->bInAir;}
  DragSuppression[0]=DragSuppression[1]=0;
  if(Instance)if(auto* A=Cast<AWardrobeShowcase>(Instance->GetOwningActor())){DragSuppression[0]=A->GetLimbGroundSuppression(LeftFoot.BoneName);DragSuppression[1]=A->GetLimbGroundSuppression(RightFoot.BoneName);}
  for(auto& G:Ground)G.bHit=false;
  auto* Mesh=Instance?Instance->GetSkelMeshComponent():nullptr;
- if(!Mesh||!Mesh->GetWorld()||!bEnabled)return;
+ if(!Mesh||!Mesh->GetWorld()||!bEnabled||bRuntimeInAir)return;
  MeshWorld=Mesh->GetComponentTransform();
  // Reject bad component transforms before socket queries, traces or worker snapshots.
  if(MeshWorld.ContainsNaN()||!MeshWorld.GetRotation().IsNormalized())return;
@@ -138,6 +141,9 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  const auto& Bones=O.Pose.GetPose().GetBoneContainer();const FBoneReference* Feet[]={&LeftFoot,&RightFoot};
  const auto PelvisIndex=Pelvis.GetCompactPoseIndex(Bones);
  if(!O.Pose.GetPose().IsValidIndex(PelvisIndex))return;
+ if(bRuntimeInAir){
+  PelvisOffset=0;for(int I=0;I<2;I++){SmoothedOffset[I]=FVector::ZeroVector;SmoothedRotation[I]=FQuat::Identity;bFootLocked[I]=bLockReleasing[I]=false;bLockCanAcquire[I]=true;}return;
+ }
  const float A=bSnap||BlendTime<=0?1.f:1.f-FMath::Exp(-DeltaTime*4.6f/BlendTime);
  // PreUpdate can be skipped during reinitialization. Never transform through an
  // invalid snapshot; existing finite ground offsets fade back to the source pose.
@@ -155,7 +161,7 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
    const float Reference=I==0?LeftReferenceHeight:RightReferenceHeight;
    const float Lift=FMath::Max(0.f,Foot.GetLocation().Z-Reference);
    const float Contact=bLockPlantedFeet?FMath::Clamp(O.Curve.Get(I==0?LeftPlantCurve:RightPlantCurve),0.f,1.f):1.f;
-   const float Plant=(1.f-FMath::SmoothStep(MaxPlantHeight*.5f,MaxPlantHeight,Lift))*(1.f-DragSuppression[I])*Contact;LastPlant[I]=Plant;
+   const float Plant=(1.f-FMath::SmoothStep(MaxPlantHeight*.5f,MaxPlantHeight,Lift))*(1.f-DragSuppression[I])*Contact*RuntimeGroundAlpha;LastPlant[I]=Plant;
    const FVector Normal=MeshWorld.InverseTransformVectorNoScale(Ground[I].Normal).GetSafeNormal();
    const FVector Up=MeshWorld.InverseTransformVectorNoScale(FVector::UpVector).GetSafeNormal();
    const TArray<FVector>& Points=I==0?LeftSolePoints:RightSolePoints;
@@ -173,7 +179,7 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
    if(Plant>.001f){RequestedPelvis=Any?FMath::Min(RequestedPelvis,Offset.Z):Offset.Z;Any=true;}
   }
   if(bWorldValid&&(bLockPlantedFeet||bFootLocked[I]||bLockReleasing[I])){
-   const float Lock=FMath::Clamp(O.Curve.Get(I==0?LeftPlantCurve:RightPlantCurve),0.f,1.f)*(1.f-DragSuppression[I]);
+   const float Lock=FMath::Clamp(O.Curve.Get(I==0?LeftPlantCurve:RightPlantCurve),0.f,1.f)*(1.f-DragSuppression[I])*RuntimeGroundAlpha;
    const FVector Horizontal=UpdateFootLock(I,MeshWorld.TransformPosition(Foot.GetLocation()),Lock,bEnabled&&Ground[I].bHit&&bLockPlantedFeet);
    Offset.X=Horizontal.X;Offset.Y=Horizontal.Y;
   }

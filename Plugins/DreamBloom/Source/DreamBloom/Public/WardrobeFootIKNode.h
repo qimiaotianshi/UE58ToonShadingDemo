@@ -56,6 +56,8 @@ struct DREAMBLOOM_API FAnimNode_WardrobeFootIK : public FAnimNode_SkeletalContro
  float PelvisOffset=0,DeltaTime=0;
  bool bSnap=true;
  float LastPlant[2]={0,0};
+ float RuntimeGroundAlpha=1;
+ bool bRuntimeInAir=false;
  float DragSuppression[2]={0,0};
  bool bFootLocked[2]={false,false};
  FVector LockedFootWorld[2]={FVector::ZeroVector,FVector::ZeroVector};

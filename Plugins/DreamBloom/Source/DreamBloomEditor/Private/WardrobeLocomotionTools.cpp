@@ -8,6 +8,11 @@
 #include "Factories/AnimBlueprintFactory.h"
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_BlendSpacePlayer.h"
+#include "AnimGraphNode_BlendListByBool.h"
+#include "AnimGraphNode_SequencePlayer.h"
+#include "AnimGraphNode_Slot.h"
+#include "AnimGraphNode_Inertialization.h"
+#include "UObject/UnrealType.h"
 #include "AnimGraphNode_LocalToComponentSpace.h"
 #include "AnimGraphNode_ComponentToLocalSpace.h"
 #include "AnimGraphNode_KawaiiPhysics.h"
@@ -119,7 +124,7 @@ bool UWardrobeLocomotionTools::UpdateLocomotionAssets(){
   FAnimSyncMarker R;R.MarkerName=TEXT("RightPlant");R.Time=Right;A->AuthoredSyncMarkers.Add(R);
   A->SortSyncMarkers();A->RefreshSyncMarkerDataFromAuthored();return Save(A);
  };
- if(!Mark(TEXT("Walk"),18.f/30,2.f/30)||!Mark(TEXT("Run"),20.f/30,8.f/30))return false;
+ if(!Mark(TEXT("Walk"),29.f/30,12.f/30)||!Mark(TEXT("Run"),20.f/30,8.f/30))return false;
  Blend->ValidateSampleData();Blend->ResampleData();if(!Save(Blend))return false;
  // Model and clips share X-forward/Z-up FBX import settings. Do not add a second yaw conversion.
  auto* C=Cast<AWardrobeExplorer>(Character->GeneratedClass->GetDefaultObject());if(!C||!C->GetMesh()->GetSkeletalMeshAsset())return false;
@@ -164,4 +169,63 @@ bool UWardrobeLocomotionTools::UpdateLocomotionZoomInput(){
  bool Found=false;for(const auto& Mapping:Data->Mapping->GetMappings())if(Mapping.Action==Zoom&&Mapping.Key==EKeys::MouseWheelAxis)Found=true;
  if(!Found)Data->Mapping->MapKey(Zoom,EKeys::MouseWheelAxis);
  return Save(Zoom)&&Save(Data->Mapping)&&Save(Data);
+}
+
+bool UWardrobeLocomotionTools::UpdateLocomotionTransitions(){
+ using namespace ExplorerTools;const FString Root=TEXT("/Game/BluePrint/ALS/");
+ auto* Data=LoadObject<UWardrobeLocomotionData>(nullptr,*(Root+TEXT("Data/DA_ALSLocomotion")));
+ auto* Anim=LoadObject<UAnimBlueprint>(nullptr,*(Root+TEXT("AnimationBP/ABP_ALSLocomotion")));
+ if(!Data||!Anim)return false;
+ auto Load=[&](const TCHAR* Name){return LoadObject<UAnimSequence>(nullptr,*(Root+TEXT("Animations/A_ALS_")+Name));};
+ Data->IdleAnimation=Load(TEXT("Idle"));
+ Data->WalkStartLeft=Load(TEXT("WalkStart"));Data->WalkStartRight=Data->WalkStartLeft;
+ Data->RunStartLeft=Load(TEXT("RunStart"));Data->RunStartRight=Data->RunStartLeft;
+ Data->WalkStopLeft=Load(TEXT("WalkStop_L"));Data->WalkStopRight=Load(TEXT("WalkStop_R"));
+ Data->RunStopLeft=Load(TEXT("RunStop_L"));Data->RunStopRight=Load(TEXT("RunStop_R"));
+ Data->JumpWalkLeft=Load(TEXT("JumpWalk_L"));Data->JumpWalkRight=Load(TEXT("JumpWalk_R"));
+ Data->JumpRunLeft=Load(TEXT("JumpRun_L"));Data->JumpRunRight=Load(TEXT("JumpRun_R"));
+ Data->AirLoop=Load(TEXT("Air"));Data->FallLoop=Load(TEXT("Fall"));Data->Landing=Load(TEXT("Land"));Data->HeavyLanding=Load(TEXT("LandHeavy"));
+ Data->IdleVariations={Load(TEXT("IdleGesture"))};
+ if(!Data->IdleAnimation||!Data->WalkStopLeft||!Data->RunStopRight||!Data->AirLoop)return false;
+ // New clips leave simulated chains to the same continuously running physics node.
+ TArray<UAnimSequence*> Clips={Data->WalkStartLeft,Data->WalkStartRight,Data->RunStartLeft,Data->RunStartRight,Data->WalkStopLeft,Data->WalkStopRight,Data->RunStopLeft,Data->RunStopRight,Data->JumpWalkLeft,Data->JumpWalkRight,Data->JumpRunLeft,Data->JumpRunRight,Data->AirLoop,Data->FallLoop,Data->Landing,Data->HeavyLanding};
+ for(const auto& Clip:Data->IdleVariations)Clips.Add(Clip.Get());
+ for(auto* Clip:Clips){
+  if(!Clip)continue;auto& Controller=Clip->GetController();Controller.OpenBracket(FText::FromString(TEXT("Locomotion physics ownership")),false);
+  const auto& Ref=Clip->GetSkeleton()->GetReferenceSkeleton();
+  for(int I=0;I<Ref.GetNum();I++){const FString Bone=Ref.GetBoneName(I).ToString();if(Bone.StartsWith(TEXT("发"))||Bone.StartsWith(TEXT("髪"))||Bone.StartsWith(TEXT("スカート")))Controller.RemoveBoneTrack(Ref.GetBoneName(I),false);}
+  Controller.CloseBracket(false);if(!Save(Clip))return false;
+ }
+ auto* Jump=LoadObject<UInputAction>(nullptr,*(Root+TEXT("Input/IA_Jump")));if(!Jump)Jump=Asset<UInputAction>(Root+TEXT("Input/IA_Jump"));
+ Jump->ValueType=EInputActionValueType::Boolean;Data->JumpAction=Jump;
+ bool Found=false;for(const auto& Mapping:Data->Mapping->GetMappings())if(Mapping.Action==Jump&&Mapping.Key==EKeys::SpaceBar)Found=true;
+ if(!Found)Data->Mapping->MapKey(Jump,EKeys::SpaceBar);
+ if(!Save(Jump)||!Save(Data->Mapping)||!Save(Data))return false;
+ for(auto& G:Anim->FunctionGraphs){
+  UAnimGraphNode_BlendSpacePlayer* Player=nullptr;UAnimGraphNode_LocalToComponentSpace* CS=nullptr;bool Done=false;
+  for(auto& N:G->Nodes){if(auto* P=Cast<UAnimGraphNode_BlendSpacePlayer>(N.Get()))Player=P;if(auto* P=Cast<UAnimGraphNode_LocalToComponentSpace>(N.Get()))CS=P;if(Cast<UAnimGraphNode_Slot>(N.Get()))Done=true;}
+  if(!Player||!CS||Done)continue;
+  auto* Idle=Node<UAnimGraphNode_SequencePlayer>(G,-1200);Idle->NodePosY=250;Idle->SetAnimationAsset(Data->IdleAnimation);
+  for(auto& P:Idle->ShowPinForProperties)if(P.PropertyName==TEXT("Sequence"))P.bShowPin=true;Idle->ReconstructNode();
+  auto* Choose=Node<UAnimGraphNode_BlendListByBool>(G,-850);
+  auto* BlendType=FindFProperty<FEnumProperty>(FAnimNode_BlendListBase::StaticStruct(),TEXT("TransitionType"));
+  if(BlendType)BlendType->GetUnderlyingProperty()->SetIntPropertyValue(BlendType->ContainerPtrToValuePtr<void>(&Choose->Node),int64(EBlendListTransitionType::Inertialization));
+  Choose->ReconstructNode();
+  auto Connect=[&](UEdGraphNode* From,FName OutName,UEdGraphNode* To,FName InName){auto* Out=From->FindPin(OutName);auto* In=To->FindPin(InName);return Out&&In&&G->GetSchema()->TryCreateConnection(Out,In);};
+  auto Variable=[&](FName Name,int Y){auto* N=Node<UK2Node_VariableGet>(G,-1450);N->NodePosY=Y;N->VariableReference.SetSelfMember(Name);N->ReconstructNode();return N;};
+  auto* Moving=Variable(TEXT("bMoving"),-160);auto* IdleAsset=Variable(TEXT("IdleAnimation"),450);
+  if(!Connect(Moving,TEXT("bMoving"),Choose,TEXT("bActiveValue"))||!Connect(IdleAsset,TEXT("IdleAnimation"),Idle,TEXT("Sequence")))return false;
+  UEdGraphPin* PlayerOut=nullptr;UEdGraphPin* IdleOut=nullptr;
+  for(auto* Pin:Player->Pins)if(Pin->Direction==EGPD_Output&&Pin->PinType.PinCategory==TEXT("struct"))PlayerOut=Pin;
+  for(auto* Pin:Idle->Pins)if(Pin->Direction==EGPD_Output&&Pin->PinType.PinCategory==TEXT("struct"))IdleOut=Pin;
+  if(!PlayerOut||!IdleOut)return false;
+  PlayerOut->BreakAllPinLinks();for(auto* Pin:CS->Pins)if(Pin->Direction==EGPD_Input)Pin->BreakAllPinLinks();
+  auto* TruePin=Choose->FindPin(TEXT("BlendPose_0"));auto* FalsePin=Choose->FindPin(TEXT("BlendPose_1"));
+  if(!TruePin||!FalsePin||!G->GetSchema()->TryCreateConnection(PlayerOut,TruePin)||!G->GetSchema()->TryCreateConnection(IdleOut,FalsePin))return false;
+  auto* Slot=Node<UAnimGraphNode_Slot>(G,-550);Slot->Node.SlotName=TEXT("DefaultSlot");Slot->Node.bAlwaysUpdateSourcePose=true;
+  auto* Inertial=Node<UAnimGraphNode_Inertialization>(G,-300);CS->NodePosX=0;
+  if(!Link(Choose,Slot)||!Link(Slot,Inertial)||!Link(Inertial,CS))return false;
+ }
+ FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Anim);FKismetEditorUtilities::CompileBlueprint(Anim);
+ return Anim->Status!=BS_Error&&Save(Anim);
 }

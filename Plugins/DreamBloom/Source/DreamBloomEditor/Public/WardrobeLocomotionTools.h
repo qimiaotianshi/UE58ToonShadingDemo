@@ -15,4 +15,6 @@ public:
  static bool AddLocomotionDestination(UWardrobeMenuData* Menu);
  UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
  static bool UpdateLocomotionZoomInput();
+ UFUNCTION(BlueprintCallable,Category="Wardrobe|Editor")
+ static bool UpdateLocomotionTransitions();
 };

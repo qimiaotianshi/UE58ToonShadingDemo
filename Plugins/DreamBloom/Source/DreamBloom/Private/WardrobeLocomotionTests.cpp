@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
@@ -150,6 +151,45 @@ bool FWardrobeCameraZoomTest::RunTest(const FString&){
  A->Zoom(FInputActionValue(100.f));A->ApplySettings();TestEqual(TEXT("Near target clamps"),A->Settings->CameraDistance+A->CameraZoomOffset,A->Settings->CameraMinDistance);
  A->Zoom(FInputActionValue(-100.f));TestEqual(TEXT("Far target clamps"),A->Settings->CameraDistance+A->CameraZoomOffset,A->Settings->CameraMaxDistance);
  const float Offset=A->CameraZoomOffset;PC->SetIgnoreLookInput(true);A->Zoom(FInputActionValue(1.f));TestEqual(TEXT("Blocked/loading input cannot zoom"),A->CameraZoomOffset,Offset);PC->ResetIgnoreLookInput();PC->bPauseMenu=true;A->Zoom(FInputActionValue(1.f));TestEqual(TEXT("Pause menu cannot zoom"),A->CameraZoomOffset,Offset);
+ GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeExpandedMovementTest,"DreamBloom.Locomotion.StartStopJumpIdle",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeExpandedMovementTest::RunTest(const FString&){
+ auto* Class=LoadClass<AWardrobeExplorer>(nullptr,TEXT("/Game/BluePrint/ALS/Characters/BP_ALSCharacter.BP_ALSCharacter_C"));if(!TestNotNull(TEXT("Playable blueprint"),Class))return false;
+ auto* W=UWorld::CreateWorld(EWorldType::Game,false);GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(W);
+ auto* A=W->SpawnActor<AWardrobeExplorer>(Class,FVector(0,0,85),FRotator::ZeroRotator);auto* PC=W->SpawnActor<AWardrobeExplorerController>();PC->SetPlayer(NewObject<ULocalPlayer>(GEngine));PC->Possess(A);PC->SetControlRotation(FRotator::ZeroRotator);PC->ResetIgnoreMoveInput();PC->ResetIgnoreLookInput();
+ A->Settings=DuplicateObject<UWardrobeLocomotionData>(A->Settings,A);A->ApplySettings();auto* D=A->Settings.Get();auto* Anim=Cast<UWardrobeLocomotionAnim>(A->GetMesh()->GetAnimInstance());
+ if(!TestNotNull(TEXT("Animation instance"),Anim)){GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return false;}
+ TestNotNull(TEXT("Walking stop"),D->WalkStopLeft.Get());TestNotNull(TEXT("Running stop"),D->RunStopRight.Get());TestNotNull(TEXT("Air loop"),D->AirLoop.Get());TestNotNull(TEXT("Landing"),D->Landing.Get());TestNotNull(TEXT("Jump input"),D->JumpAction.Get());
+ bool Space=false;for(const auto& M:D->Mapping->GetMappings())if(M.Action==D->JumpAction&&M.Key==EKeys::SpaceBar)Space=true;TestTrue(TEXT("Space mapping"),Space);
+ auto* FloorActor=W->SpawnActor<AActor>();auto* Floor=NewObject<UBoxComponent>(FloorActor);FloorActor->SetRootComponent(Floor);Floor->SetBoxExtent(FVector(10000,10000,10));Floor->SetCollisionResponseToAllChannels(ECR_Block);Floor->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Floor->RegisterComponent();FloorActor->SetActorLocation(FVector(0,0,-10));
+ auto Eval=[&](){A->GetMesh()->TickAnimation(1.f/60,false);A->GetMesh()->RefreshBoneTransforms();A->GetMesh()->HandleExistingParallelEvaluationTask(true,true);};
+ auto Step=[&](int Count,bool Input){for(int I=0;I<Count;I++){if(Input)A->Move(FInputActionValue(FVector2D(0,1)));A->Tick(1.f/60);A->GetCharacterMovement()->TickComponent(1.f/60,LEVELTICK_All,nullptr);Eval();}};
+ A->GetCharacterMovement()->SetMovementMode(MOVE_Walking);Eval();Step(1,true);TestEqual(TEXT("Idle enters walking start"),Anim->MovementAction,EWardrobeMovementAction::WalkStart);
+ Step(65,true);TestTrue(TEXT("Start returns to moving gait"),Anim->MovementAction==EWardrobeMovementAction::None);
+ Step(1,false);TestEqual(TEXT("Movement release selects walking stop"),Anim->MovementAction,EWardrobeMovementAction::WalkStop);TestTrue(TEXT("Stop montage is playing"),Anim->MovementMontage&&Anim->Montage_IsPlaying(Anim->MovementMontage));
+ Step(3,true);TestFalse(TEXT("Renewed input interrupts stopping"),Anim->MovementAction==EWardrobeMovementAction::WalkStop);Step(70,true);A->StartSprint();Step(90,true);Step(1,false);TestEqual(TEXT("Running release selects running stop"),Anim->MovementAction,EWardrobeMovementAction::RunStop);
+ const float StopSpeed=A->GetVelocity().Size2D();Step(6,false);TestTrue(TEXT("Authored stop retains a controlled braking step"),A->GetVelocity().Size2D()>1&&A->GetVelocity().Size2D()<=StopSpeed);
+ float Prior=A->GetVelocity().Size2D(),WorstRotation=0;FQuat PriorLeg=A->GetMesh()->GetSocketQuaternion(TEXT("足D_L"));
+ for(int I=0;I<210;I++){Step(1,false);const float Current=A->GetVelocity().Size2D();TestTrue(TEXT("Stopping cannot reaccelerate capsule"),Current<=Prior+.1f);Prior=Current;const auto Leg=A->GetMesh()->GetSocketQuaternion(TEXT("足D_L"));WorstRotation=FMath::Max(WorstRotation,float(Leg.AngularDistance(PriorLeg)));PriorLeg=Leg;}
+ TestTrue(TEXT("Authored stop settles to zero travel"),Prior<.1f);TestTrue(TEXT("Evaluated stop has no abrupt leg rotation"),WorstRotation<1.f);
+ AddInfo(FString::Printf(TEXT("BaseAnim3 stop max leg delta %.3f rad/frame; final speed %.3f"),WorstRotation,Prior));
+ TestTrue(TEXT("Stationary animation is no longer frozen"),Anim->LocomotionPlayRate>.1f);
+ A->StopSprint();const float BeforeJumpZ=A->GetActorLocation().Z;A->StartJump();Step(2,false);TestTrue(TEXT("Space causes physical lift"),A->GetActorLocation().Z>86&&A->GetCharacterMovement()->IsFalling());TestEqual(TEXT("Lift selects takeoff"),Anim->MovementAction,EWardrobeMovementAction::Takeoff);A->EndJump();
+ FAnimNode_WardrobeFootIK* IK=nullptr;for(TFieldIterator<FStructProperty> P(Anim->GetClass());P;++P)if(P->Struct==FAnimNode_WardrobeFootIK::StaticStruct())IK=P->ContainerPtrToValuePtr<FAnimNode_WardrobeFootIK>(Anim);
+ TestTrue(TEXT("Air disables foot ground adaptation"),IK&&IK->bRuntimeInAir&&!IK->Ground[0].bHit&&!IK->Ground[1].bHit);
+ bool Air=false,Land=false;float MaxHeight=A->GetActorLocation().Z,SlotWeight=0,MaxLocalPelvis=0;FQuat AirLeg=FQuat::Identity;
+ for(int I=0;I<100;I++){Step(1,false);Air|=Anim->MovementAction==EWardrobeMovementAction::Air;Land|=Anim->MovementAction==EWardrobeMovementAction::Land;MaxHeight=FMath::Max(MaxHeight,float(A->GetActorLocation().Z));const float LocalPelvis=A->GetMesh()->GetComponentTransform().InverseTransformPosition(A->GetMesh()->GetSocketLocation(TEXT("腰"))).Z;MaxLocalPelvis=FMath::Max(MaxLocalPelvis,LocalPelvis);if(Anim->MovementAction==EWardrobeMovementAction::Air){SlotWeight=FMath::Max(SlotWeight,Anim->GetSlotMontageGlobalWeight(TEXT("DefaultSlot")));AirLeg=A->GetMesh()->GetSocketQuaternion(TEXT("足D_L"));}}
+ TestTrue(TEXT("Jump root height follows capsule movement only"),MaxLocalPelvis<115.f);
+ const float ExpectedHeight=FMath::Square(D->JumpVelocity)/(2.f*FMath::Abs(A->GetCharacterMovement()->GetGravityZ()));
+ TestTrue(TEXT("Capsule apex agrees with configured ballistic height"),FMath::Abs(MaxHeight-BeforeJumpZ-ExpectedHeight)<6.f);
+ AddInfo(FString::Printf(TEXT("Jump capsule rise %.2f cm; expected %.2f; maximum mesh-local pelvis height %.2f cm"),MaxHeight-BeforeJumpZ,ExpectedHeight,MaxLocalPelvis));
+ TestTrue(TEXT("Jump enters persistent airborne loop"),Air);TestTrue(TEXT("Touchdown plays landing"),Land);TestTrue(TEXT("Jump has actual height"),MaxHeight>130);TestTrue(TEXT("Landed foot IK fades back"),Anim->GroundIKAlpha>.99f&&IK&&!IK->bRuntimeInAir);
+ TestTrue(TEXT("Air animation contributes to the evaluated slot"),SlotWeight>.95f);TestTrue(TEXT("Air animation changes the actual leg pose"),AirLeg.AngularDistance(A->GetMesh()->GetSocketQuaternion(TEXT("足D_L")))>.05f);AddInfo(FString::Printf(TEXT("Air slot weight %.3f; final leg difference %.3f radians"),SlotWeight,AirLeg.AngularDistance(A->GetMesh()->GetSocketQuaternion(TEXT("足D_L")))));
+ Step(120,false);const float IdleYaw=A->GetActorRotation().Yaw;
+ for(float CameraYaw:{95.f,-140.f,175.f}){PC->SetControlRotation(FRotator(0,CameraYaw,0));Step(120,false);TestTrue(TEXT("Orbiting the idle camera keeps character heading fixed"),FMath::Abs(FMath::FindDeltaAngleDegrees(IdleYaw,A->GetActorRotation().Yaw))<.01f);TestEqual(TEXT("Camera orbit does not start a movement montage"),Anim->MovementAction,EWardrobeMovementAction::None);}
+ PC->SetControlRotation(FRotator(0,A->GetActorRotation().Yaw,0));
+ A->Settings->IdleMinInterval=A->Settings->IdleMaxInterval=.1f;Anim->NextIdleTime=.1f;Step(15,false);TestEqual(TEXT("Idle interval triggers configured variation"),Anim->MovementAction,EWardrobeMovementAction::IdleVariation);Step(2,true);TestFalse(TEXT("Movement interrupts idle variation"),Anim->MovementAction==EWardrobeMovementAction::IdleVariation);
  GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
 }
 #endif
