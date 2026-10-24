@@ -9,11 +9,13 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/Texture2D.h"
 #include "Engine/LevelStreaming.h"
+#include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "WorldPartition/WorldPartitionSubsystem.h"
 #include "ContentStreaming.h"
+#include "RenderingThread.h"
 #include "AssetCompilingManager.h"
 #include "ShaderCompiler.h"
 #include "ShaderPipelineCache.h"
@@ -134,6 +136,8 @@ bool UWardrobeLoadingSubsystem::TravelToLevel(TSoftObjectPtr<UWorld> Level,UWard
  MinDisplay=Settings?FMath::Max(0.f,Settings->MinimumLoadingScreenTime):1.5f;
  Warmup=Settings?FMath::Max(.5f,Settings->SceneWarmupTime):2.f;
  SlowWarning=Settings?FMath::Max(5.f,Settings->SlowLoadingWarningTime):45.f;
+ SettleTime=Settings?FMath::Max(.1f,Settings->TravelSettleTime):.35f;
+ SettleFramesRequired=Settings?FMath::Clamp(Settings->TravelSettleFrames,1,30):3;
  if(ImageOverride.IsNull()&&Settings)ImageOverride=Settings->LoadingBackground;
  LoadingTexture=ImageOverride.LoadSynchronous();
  if(LoadingTexture){
@@ -150,12 +154,12 @@ bool UWardrobeLoadingSubsystem::TravelToLevel(TSoftObjectPtr<UWorld> Level,UWard
  Visual->Destination=Destination.IsEmpty()?FText::FromString(TEXT("下一段旅程")):Destination;
  Visual->Hint=Settings?Settings->LoadingHint:FText::FromString(TEXT("新的风景，即将展开。"));
  PackageName=Target;TravelOptions=Options;
- bActive=true;bTravelIssued=false;bMapLoaded=false;bAdditionalLoading=false;bManualContinue=false;
- WarmupFrames=0;ReadyAt=0;CompleteAt=0;StartedAt=FPlatformTime::Seconds();bQAScreenshot=false;
+ bActive=true;bTravelIssued=false;bSettled=false;bMapLoaded=false;bAdditionalLoading=false;bManualContinue=false;
+ WarmupFrames=0;SettleFrames=0;ReadyAt=0;CompleteAt=0;StartedAt=FPlatformTime::Seconds();bQAScreenshot=false;
  PreviousFocus=FSlateApplication::Get().GetKeyboardFocusedWidget();
  Overlay=SNew(SWardrobeLoadingScreen).Visual(Visual).OnContinue(FSimpleDelegate::CreateWeakLambda(this,[this](){bManualContinue=true;}));
  ShowOverlay();GuardInput();
- UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_BEGIN target=%s image=%s"),*PackageName,LoadingTexture?*LoadingTexture->GetPathName():TEXT("fallback"));
+ UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_BEGIN target=%s image=%s settle=%.2fs/%d"),*PackageName,LoadingTexture?*LoadingTexture->GetPathName():TEXT("fallback"),SettleTime,SettleFramesRequired);
  return true;
 }
 
@@ -222,7 +226,19 @@ bool UWardrobeLoadingSubsystem::Tick(float DeltaSeconds)
  GuardInput();
  if(!bTravelIssued){
   // Let the viewport present the opaque cover before entering blocking engine travel.
-  if(Now-StartedAt<.15)return true;
+  if(Now-StartedAt<CoverHold)return true;
+  // [Settle] Hold the cover for a few more frames and then flush before travelling. OpenLevel tears
+  // the source world down synchronously (CleanupWorld -> RemovePrimitiveSceneInfo ->
+  // RemoveCachedMeshDrawCommands), and that teardown indexes Scene->CachedMeshDrawCommandStateBuckets
+  // by ids recorded when the commands were cached. If the render thread still has queued primitive
+  // updates from the outgoing world, a bucket can already be gone and the lookup returns garbage.
+  // Draining both streaming and the render command queue first makes the teardown start from a
+  // quiet scene instead of racing the tail of the previous frame.
+  if(!bSettled){
+   ++SettleFrames;
+   if(SettleFrames<SettleFramesRequired||Now-StartedAt<SettleTime)return true;
+   bSettled=true;
+  }
   bTravelIssued=true;
   // PIE does not support MoviePlayer. Its viewport overlay still covers warmup.
   if(GetWorld()->WorldType!=EWorldType::PIE&&IsMoviePlayerEnabled()){
@@ -233,6 +249,9 @@ bool UWardrobeLoadingSubsystem::Tick(float DeltaSeconds)
    GetMoviePlayer()->SetupLoadingScreen(Attr);
    UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_MOVIE_PREPARED"));
   }
+  // Last thing before the blocking travel: the loading screen above is already up, so a short
+  // game thread stall here is invisible to the player.
+  SettleBeforeTravel();
   UGameplayStatics::OpenLevel(GetGameInstance(),FName(*PackageName),true,TravelOptions);
   return true;
  }
@@ -265,6 +284,20 @@ bool UWardrobeLoadingSubsystem::Tick(float DeltaSeconds)
  return true;
 }
 
+void UWardrobeLoadingSubsystem::SettleBeforeTravel()
+{
+ const double Begin=FPlatformTime::Seconds();
+ const int32 StreamingBefore=IStreamingManager::Get().GetNumWantingResources();
+ // Level streaming creates and destroys primitives on the render thread. Finish the outstanding
+ // requests now instead of letting them land in the middle of the travel teardown.
+ if(UWorld* World=GetWorld())World->FlushLevelStreaming(EFlushLevelStreamingType::Full);
+ // Drain everything already queued for the render thread (transform updates, primitive add/remove,
+ // cached mesh draw command removal) so the world teardown does not index a bucket that is gone.
+ FlushRenderingCommands();
+ UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_SETTLED target=%s frames=%d streaming=%d flush=%.2fms"),
+  *PackageName,SettleFrames,StreamingBefore,(FPlatformTime::Seconds()-Begin)*1000.0);
+}
+
 void UWardrobeLoadingSubsystem::Finish(bool bFailed)
 {
  if(!bActive)return;
@@ -287,7 +320,7 @@ void UWardrobeLoadingSubsystem::Finish(bool bFailed)
  bActive=false;
  if(!bFailed)if(auto* PC=Cast<AWardrobeExplorerController>(GetGameInstance()->GetFirstLocalPlayerController()))PC->SetExplorerInput();
  if(!bFailed)++CompletedTravels;
- UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_END target=%s failed=%d manual=%d frames=%u seconds=%.2f completed=%d"),*PackageName,bFailed,bManualContinue,WarmupFrames,FPlatformTime::Seconds()-StartedAt,CompletedTravels);
+ UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_END target=%s failed=%d manual=%d frames=%u settleFrames=%d seconds=%.2f completed=%d"),*PackageName,bFailed,bManualContinue,WarmupFrames,SettleFrames,FPlatformTime::Seconds()-StartedAt,CompletedTravels);
  Overlay.Reset();DestinationWorld.Reset();PreviousFocus.Reset();
 }
 

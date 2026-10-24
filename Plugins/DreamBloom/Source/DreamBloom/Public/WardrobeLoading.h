@@ -37,6 +37,8 @@ private:
  void GuardInput();
  bool IsSceneReady(UWorld* World) const;
  void ShowOverlay();
+ /** Drain level streaming and the render command queue so OpenLevel's teardown starts from a quiet scene. */
+ void SettleBeforeTravel();
 
  UPROPERTY(Transient) TObjectPtr<UTexture2D> LoadingTexture;
  TSharedPtr<FWardrobeLoadingVisual> Visual;
@@ -48,10 +50,14 @@ private:
  FDelegateHandle PostLoadHandle, FailureHandle;
  FString PackageName, TravelOptions;
  bool bActive=false, bTravelIssued=false, bMapLoaded=false, bAdditionalLoading=false;
+ bool bSettled=false;
  bool bManualContinue=false, bSavedCursor=false;
  double StartedAt=0, LoadedAt=0, ReadyAt=0, CompleteAt=0;
  float MinDisplay=1.5f, Warmup=2.f, SlowWarning=45.f;
  uint32 WarmupFrames=0;
+ /** Pre-travel settle: hold the cover, then flush streaming + rendering before issuing the travel. */
+ float SettleTime=.35f, CoverHold=.15f;
+ int32 SettleFramesRequired=3, SettleFrames=0;
  int32 CompletedTravels=0;
  bool bQAScreenshot=false;
 };

@@ -39,6 +39,10 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Click Effect") TObjectPtr<UWardrobeClickEffectData> ClickEffect;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen") TSoftObjectPtr<UTexture2D> LoadingBackground;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen") FText LoadingHint=FText::FromString(TEXT("新的风景，即将展开。"));
+ /** Hold the cover this long before the blocking travel, so streaming and the render thread go quiet first. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen",meta=(ClampMin="0.1",Units="s")) float TravelSettleTime=0.35f;
+ /** Minimum number of rendered frames spent in that hold window. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen",meta=(ClampMin="1",ClampMax="30")) int32 TravelSettleFrames=3;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen",meta=(ClampMin="0.0",Units="s")) float MinimumLoadingScreenTime=1.5f;
  /** Render the destination under the cover, then require streaming to stay quiet for 0.5 seconds. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen",meta=(ClampMin="0.5",Units="s")) float SceneWarmupTime=2.f;
