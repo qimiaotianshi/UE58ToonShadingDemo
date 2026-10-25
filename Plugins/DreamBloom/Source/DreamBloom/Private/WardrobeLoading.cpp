@@ -321,7 +321,7 @@ void UWardrobeLoadingSubsystem::Finish(bool bFailed)
  if(!bFailed)if(auto* PC=Cast<AWardrobeExplorerController>(GetGameInstance()->GetFirstLocalPlayerController()))PC->SetExplorerInput();
  if(!bFailed)++CompletedTravels;
  UE_LOG(LogTemp,Display,TEXT("WARDROBE_LOADING_END target=%s failed=%d manual=%d frames=%u settleFrames=%d seconds=%.2f completed=%d"),*PackageName,bFailed,bManualContinue,WarmupFrames,SettleFrames,FPlatformTime::Seconds()-StartedAt,CompletedTravels);
- Overlay.Reset();DestinationWorld.Reset();PreviousFocus.Reset();
+ Overlay.Reset();DestinationWorld.Reset();PreviousFocus.Reset();OnTravelCompleted.Broadcast(!bFailed);
 }
 
 void UWardrobeLoadingSubsystem::OnTravelFailure(UWorld* World,ETravelFailure::Type Type,const FString& Error)

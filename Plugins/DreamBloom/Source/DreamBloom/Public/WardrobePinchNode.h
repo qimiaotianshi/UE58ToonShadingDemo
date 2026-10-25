@@ -10,4 +10,5 @@ struct DREAMBLOOM_API FAnimNode_WardrobePinch : public FAnimNode_ModifyBone {
  FAnimNode_WardrobePinch();
  virtual bool HasPreUpdate() const override{return true;}
  virtual void PreUpdate(const UAnimInstance* Instance) override;
+ virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output,TArray<FBoneTransform>& Out) override;
 };

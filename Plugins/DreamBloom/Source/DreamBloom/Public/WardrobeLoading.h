@@ -11,6 +11,8 @@ class UTexture2D;
 class SWidget;
 struct FWardrobeLoadingVisual;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FWardrobeTravelCompleted,bool);
+
 /** Survives OpenLevel; owns both the blocking MoviePlayer screen and the world warmup overlay. */
 UCLASS()
 class DREAMBLOOM_API UWardrobeLoadingSubsystem : public UGameInstanceSubsystem
@@ -24,12 +26,14 @@ public:
  bool TravelToLevel(TSoftObjectPtr<UWorld> Level, UWardrobeMenuData* Settings,
                     TSoftObjectPtr<UTexture2D> ImageOverride, FText Destination, FString Options);
  UFUNCTION(BlueprintPure, Category="Wardrobe|Loading") bool IsLoading() const { return bActive; }
+ FWardrobeTravelCompleted OnTravelCompleted;
  bool IsPreparingScene() const { return bActive&&bMapLoaded; }
  /** For a destination that starts its own async work in BeginPlay. Clear when that work completes. */
  UFUNCTION(BlueprintCallable, Category="Wardrobe|Loading")
  void SetAdditionalLoadingRequired(bool bRequired) { bAdditionalLoading = bRequired; }
 
 private:
+ friend class FWardrobeDestinationMenuTest;
  bool Tick(float DeltaSeconds);
  void OnPostLoadMap(UWorld* World);
  void OnTravelFailure(UWorld* World, ETravelFailure::Type Type, const FString& Error);

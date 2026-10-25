@@ -13,6 +13,7 @@ class ULevelSequencePlayer;
 class ALevelSequenceActor;
 class UAudioComponent;
 class UWardrobeAudioData;
+class UWardrobeStoryFlow;
 class UWardrobeCharacterData;
 class UWardrobeClickEffectData;
 enum class EWardrobeUISound : uint8;
@@ -32,6 +33,8 @@ class DREAMBLOOM_API UWardrobeMenuData : public UDataAsset {
  GENERATED_BODY()
 public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Menu") TArray<FWardrobeLevelOption> Levels;
+ /** Optional. Enables new game, continue and save slots for a linear story. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story") TObjectPtr<UWardrobeStoryFlow> StoryFlow;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Menu") TSoftObjectPtr<UWorld> MenuLevel=TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/Wardrobe/Maps/L_WardrobeMain.L_WardrobeMain")));
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Characters") TObjectPtr<UWardrobeCharacterData> CharacterData;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Interaction",meta=(ClampMin="1",ClampMax="50")) float ClickDragThreshold=6.f;

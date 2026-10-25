@@ -1,4 +1,5 @@
 #include "WardrobeFootIKNode.h"
+#include "WardrobeAnimGuard.h"
 #include "WardrobeLocomotion.h"
 #include "WardrobeShowcase.h"
 #include "Animation/AnimInstance.h"
@@ -138,9 +139,10 @@ void FAnimNode_WardrobeFootIK::PreUpdate(const UAnimInstance* Instance){
  }
 }
 void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& O,TArray<FBoneTransform>& Out){
- const auto& Bones=O.Pose.GetPose().GetBoneContainer();const FBoneReference* Feet[]={&LeftFoot,&RightFoot};
+ const FCompactPose& Pose=O.Pose.GetPose();
+ const auto& Bones=Pose.GetBoneContainer();const FBoneReference* Feet[]={&LeftFoot,&RightFoot};
  const auto PelvisIndex=Pelvis.GetCompactPoseIndex(Bones);
- if(!O.Pose.GetPose().IsValidIndex(PelvisIndex))return;
+ if(!WardrobeAnimGuard::IsUsable(Pose,PelvisIndex)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobeFootIK"),PelvisIndex,Pose.GetNumBones());return;}
  if(bRuntimeInAir){
   PelvisOffset=0;for(int I=0;I<2;I++){SmoothedOffset[I]=FVector::ZeroVector;SmoothedRotation[I]=FQuat::Identity;bFootLocked[I]=bLockReleasing[I]=false;bLockCanAcquire[I]=true;}return;
  }
@@ -151,7 +153,7 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  float RequestedPelvis=0;bool Any=false;
  for(int I=0;I<2;I++){
   const auto F=Feet[I]->GetCompactPoseIndex(Bones);
-  if(!O.Pose.GetPose().IsValidIndex(F))continue;
+  if(!WardrobeAnimGuard::IsUsable(Pose,F))continue;
   const FTransform& Foot=O.Pose.GetComponentSpaceTransform(F);
   FVector Offset=FVector::ZeroVector;FQuat Rotation=FQuat::Identity;
   LastPlant[I]=0;
@@ -193,11 +195,11 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  FTransform P=O.Pose.GetComponentSpaceTransform(PelvisIndex);P.AddToTranslation(Shift);P.NormalizeRotation();Out.Emplace(PelvisIndex,P);
  for(int I=0;I<2;I++){
   const auto F=Feet[I]->GetCompactPoseIndex(Bones);
-  if(!O.Pose.GetPose().IsValidIndex(F))continue;
+  if(!WardrobeAnimGuard::IsUsable(Pose,F))continue;
   const auto K=Bones.GetParentBoneIndex(F);
-  if(!O.Pose.GetPose().IsValidIndex(K))continue;
+  if(!WardrobeAnimGuard::IsUsable(Pose,K))continue;
   const auto H=Bones.GetParentBoneIndex(K);
-  if(!O.Pose.GetPose().IsValidIndex(H))continue;
+  if(!WardrobeAnimGuard::IsUsable(Pose,H))continue;
   FTransform Hip=O.Pose.GetComponentSpaceTransform(H),Knee=O.Pose.GetComponentSpaceTransform(K),Foot=O.Pose.GetComponentSpaceTransform(F);
   const FVector Target=Foot.GetLocation()+SmoothedOffset[I];const FQuat FootRot=(SmoothedRotation[I]*Foot.GetRotation()).GetNormalized();
   FVector Line=(Foot.GetLocation()-Hip.GetLocation()).GetSafeNormal();FVector Bend=Knee.GetLocation()-Hip.GetLocation();Bend-=Line*FVector::DotProduct(Bend,Line);

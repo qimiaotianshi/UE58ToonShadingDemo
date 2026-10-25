@@ -9,7 +9,8 @@ class UAudioComponent;
 UENUM(BlueprintType)
 enum class EWardrobeUISound : uint8 {
  ActionSwitch=0 UMETA(DisplayName="Station Switch"), MapSelect=1, StartGame=4, Login=5,
- PinchGrab=14, PinchMove=15, PinchRelease=16, Back=6, Confirm=7, Cancel=8, Unavailable=9, ResetCamera=13
+ PinchGrab=14, PinchMove=15, PinchRelease=16, Back=6, Confirm=7, Cancel=8, Unavailable=9, ResetCamera=13,
+ NewGame=17, ContinueGame=18, LoadGame=19, SaveSlotSelect=20, Pause=21, Resume=22
 };
 USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobeSoundEntry {
@@ -41,6 +42,13 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Events") FWardrobeSoundEntry Cancel;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Events") FWardrobeSoundEntry Unavailable;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Events") FWardrobeSoundEntry ResetCamera;
+ /** Empty story/pause entries reuse the existing UI sounds. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story UI") FWardrobeSoundEntry NewGame;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story UI") FWardrobeSoundEntry ContinueGame;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story UI") FWardrobeSoundEntry LoadGame;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story UI") FWardrobeSoundEntry SaveSlotSelect;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pause UI") FWardrobeSoundEntry Pause;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pause UI") FWardrobeSoundEntry Resume;
  const FWardrobeSoundEntry& GetEntry(EWardrobeUISound Event) const;
 };
 

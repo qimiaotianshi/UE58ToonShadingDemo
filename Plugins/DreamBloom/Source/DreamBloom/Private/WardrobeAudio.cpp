@@ -11,6 +11,12 @@ const FWardrobeSoundEntry& UWardrobeAudioData::GetEntry(EWardrobeUISound Event) 
  ENTRY(ActionSwitch) ENTRY(MapSelect)   ENTRY(StartGame) ENTRY(Login)
  ENTRY(Back) ENTRY(Confirm) ENTRY(Cancel) ENTRY(Unavailable)    ENTRY(ResetCamera)
  #undef ENTRY
+ case EWardrobeUISound::NewGame:return NewGame.Sound.IsNull()?Confirm:NewGame;
+ case EWardrobeUISound::ContinueGame:return ContinueGame.Sound.IsNull()?StartGame:ContinueGame;
+ case EWardrobeUISound::LoadGame:return LoadGame.Sound.IsNull()?Confirm:LoadGame;
+ case EWardrobeUISound::SaveSlotSelect:return SaveSlotSelect.Sound.IsNull()?Confirm:SaveSlotSelect;
+ case EWardrobeUISound::Pause:return Pause.Sound.IsNull()?Confirm:Pause;
+ case EWardrobeUISound::Resume:return Resume.Sound.IsNull()?Cancel:Resume;
  default: {static const FWardrobeSoundEntry Empty;return Empty;}
  }
 }
@@ -18,7 +24,7 @@ void UWardrobeAudioSubsystem::Configure(UWardrobeAudioData* Data){
  if(Settings==Data)return;
  Settings=Data;LoadedSounds.Reset();
  if(!Settings)return;
- for(int32 I=0;I<=int32(EWardrobeUISound::ResetCamera);I++){
+ for(int32 I=0;I<=int32(EWardrobeUISound::Resume);I++){
   if(USoundBase* Sound=Settings->GetEntry(EWardrobeUISound(I)).Sound.LoadSynchronous())LoadedSounds.AddUnique(Sound);
  }
 }

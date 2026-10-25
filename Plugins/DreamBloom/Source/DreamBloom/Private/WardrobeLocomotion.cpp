@@ -1,4 +1,5 @@
 #include "WardrobeLocomotion.h"
+#include "WardrobeStory.h"
 #include "WardrobeLoading.h"
 #include "WardrobeShowcase.h"
 #include "WardrobeMenu.h"
@@ -23,6 +24,7 @@
 #include "Engine/GameViewportClient.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/SCompoundWidget.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Text/STextBlock.h"
@@ -224,7 +226,32 @@ void UWardrobeLocomotionAnim::NativeUpdateAnimation(float Dt){
  }
  LastSpeed=Speed;PreviousVerticalSpeed=A->GetVelocity().Z;bHadMovementInput=HasInput;bWasInAir=bInAir;
 }
+/** UI-only pause input must be handled by the focused widget, including P to resume. */
+class SWardrobeExplorerPause : public SCompoundWidget {
+public:
+ SLATE_BEGIN_ARGS(SWardrobeExplorerPause){} SLATE_ARGUMENT(AWardrobeExplorerController*,Controller) SLATE_END_ARGS()
+ void Construct(const FArguments& Args){
+  Controller=Args._Controller;
+  ChildSlot[SNew(SBorder).HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(24)
+   [SNew(SVerticalBox)
+    +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(STextBlock).Text(FText::FromString(TEXT("旅途暂停 · P 键继续")))]
+    +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(SButton).Text(FText::FromString(TEXT("继续游戏"))).OnClicked_Lambda([this](){if(Controller.IsValid())Controller->TogglePauseMenu();return FReply::Handled();})]
+    +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(SButton).Text(FText::FromString(TEXT("返回角色展示"))).OnClicked_Lambda([this](){if(Controller.IsValid())Controller->ReturnToShowcase();return FReply::Handled();})]]];
+ }
+ virtual bool SupportsKeyboardFocus() const override{return true;}
+ virtual FReply OnKeyDown(const FGeometry&,const FKeyEvent& Event) override{
+  if(Event.GetKey()==EKeys::P||Event.GetKey()==EKeys::Escape){if(!Event.IsRepeat()&&Controller.IsValid())Controller->TogglePauseMenu();return FReply::Handled();}
+  return FReply::Unhandled();
+ }
+private:
+ TWeakObjectPtr<AWardrobeExplorerController> Controller;
+};
 AWardrobeExplorerController::AWardrobeExplorerController(){OverridePlayerInputClass=UEnhancedPlayerInput::StaticClass();}
+void AWardrobeExplorerController::SetupInputComponent(){
+ Super::SetupInputComponent();
+ // Controller consumes P before pawn/DA bindings, preventing duplicate toggles.
+ if(InputComponent)InputComponent->BindKey(EKeys::P,IE_Pressed,this,&AWardrobeExplorerController::TogglePauseMenu);
+}
 void AWardrobeExplorerController::SetExplorerInput(){
  bShowMouseCursor=false;FInputModeGameOnly Input;Input.SetConsumeCaptureMouseDown(false);SetInputMode(Input);
  if(PlayerCameraManager){PlayerCameraManager->ViewPitchMin=-65;PlayerCameraManager->ViewPitchMax=35;}
@@ -235,25 +262,40 @@ void AWardrobeExplorerController::OnPossess(APawn* P){
  if(auto* A=Cast<AWardrobeExplorer>(P))if(A->Settings&&A->Settings->Mapping)if(auto* Local=GetLocalPlayer())if(auto* E=Local->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())E->AddMappingContext(A->Settings->Mapping,0);
 }
 void AWardrobeExplorerController::TogglePauseMenu(){
+ if(auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>())if(Story->IsCinematicActive())return;
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return;
  if(bPauseMenu){
-  if(PauseWidget&&GetWorld()->GetGameViewport())GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());PauseWidget.Reset();bPauseMenu=false;SetPause(false);ResetIgnoreMoveInput();ResetIgnoreLookInput();FlushPressedKeys();SetExplorerInput();return;
+  ClosePauseMenu();PlayUISound(EWardrobeUISound::Resume);return;
  }
+ PlayUISound(EWardrobeUISound::Pause);
  bPauseMenu=true;SetPause(true);SetIgnoreMoveInput(true);SetIgnoreLookInput(true);bShowMouseCursor=true;
  if(auto* A=Cast<AWardrobeExplorer>(GetPawn()))A->StopSprint();
- PauseWidget=SNew(SBorder).HAlign(HAlign_Center).VAlign(VAlign_Center).Padding(24)
- [SNew(SVerticalBox)
- +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(STextBlock).Text(FText::FromString(TEXT("旅途暂停")))]
- +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(SButton).Text(FText::FromString(TEXT("继续游戏"))).OnClicked_Lambda([this](){TogglePauseMenu();return FReply::Handled();})]
- +SVerticalBox::Slot().AutoHeight().Padding(12)[SNew(SButton).Text(FText::FromString(TEXT("返回角色展示"))).OnClicked_Lambda([this](){ReturnToShowcase();return FReply::Handled();})]];
+ PauseWidget=SNew(SWardrobeExplorerPause).Controller(this);
  if(auto* V=GetWorld()->GetGameViewport())V->AddViewportWidgetContent(PauseWidget.ToSharedRef(),90);
- FInputModeUIOnly Input;SetInputMode(Input);
+ FInputModeUIOnly Input;Input.SetWidgetToFocus(PauseWidget);SetInputMode(Input);
+ if(FSlateApplication::IsInitialized())FSlateApplication::Get().SetAllUserFocus(PauseWidget,EFocusCause::SetDirectly);
+}
+void AWardrobeExplorerController::ClosePauseMenu(){
+ if(!bPauseMenu)return;
+ if(PauseWidget&&GetWorld()->GetGameViewport())GetWorld()->GetGameViewport()->RemoveViewportWidgetContent(PauseWidget.ToSharedRef());
+ PauseWidget.Reset();bPauseMenu=false;SetPause(false);ResetIgnoreMoveInput();ResetIgnoreLookInput();FlushPressedKeys();SetExplorerInput();
+}
+void AWardrobeExplorerController::PlayUISound(EWardrobeUISound Event){
+ auto* S=GetGameInstance()->GetSubsystem<UWardrobeSession>();
+ if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){
+  if(S&&S->ExplorationMenuData)Audio->Configure(S->ExplorationMenuData->AudioData);
+  Audio->PlayEvent(Event);
+ }
 }
 void AWardrobeExplorerController::ReturnToShowcase(){
- if(bPauseMenu)TogglePauseMenu();auto* S=GetGameInstance()->GetSubsystem<UWardrobeSession>();auto* Menu=S&&S->ExplorationMenuData?S->ExplorationMenuData.Get():LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));
+ if(auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(Loading->IsLoading())return;
+ if(auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>()){Story->SaveCheckpoint();Story->CancelCinematic();}
+ ClosePauseMenu();auto* S=GetGameInstance()->GetSubsystem<UWardrobeSession>();auto* Menu=S&&S->ExplorationMenuData?S->ExplorationMenuData.Get():LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));
  if(Menu)if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()){
   const auto Level=S&&!S->ExplorationReturnLevel.IsNull()?S->ExplorationReturnLevel:Menu->MenuLevel;
-  L->TravelToLevel(Level,Menu,{},FText::FromString(TEXT("返回奇境")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"));
+  if(L->TravelToLevel(Level,Menu,{},FText::FromString(TEXT("返回奇境")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"))){
+   if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){Audio->Configure(Menu->AudioData);Audio->PlayEvent(EWardrobeUISound::Back);}
+  }
  }
 }
 void AWardrobeExplorerController::EndPlay(const EEndPlayReason::Type R){

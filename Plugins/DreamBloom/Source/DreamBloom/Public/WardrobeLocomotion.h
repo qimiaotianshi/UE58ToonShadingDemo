@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "Animation/AnimInstance.h"
 #include "WardrobeLocomotion.generated.h"
+enum class EWardrobeUISound : uint8;
 class UInputAction;class UInputMappingContext;class USpringArmComponent;class UCameraComponent;class UBlendSpace;class UAnimSequence;class UAnimMontage;
 struct FInputActionValue;
 UENUM(BlueprintType)
@@ -113,6 +114,7 @@ class DREAMBLOOM_API AWardrobeExplorerController : public APlayerController {
  GENERATED_BODY()
 public:
  AWardrobeExplorerController();
+ virtual void SetupInputComponent() override;
  virtual void BeginPlay() override;
  virtual void OnPossess(APawn* Pawn) override;
  virtual void PlayerTick(float Dt) override;
@@ -120,6 +122,9 @@ public:
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
  bool bPauseMenu=false;
 private:
+ friend class FWardrobePauseKeyTest;
+ void ClosePauseMenu();
+ void PlayUISound(EWardrobeUISound Event);
  TSharedPtr<class SWidget> PauseWidget;
  double QAStarted=0;
  int32 QAStage=0;

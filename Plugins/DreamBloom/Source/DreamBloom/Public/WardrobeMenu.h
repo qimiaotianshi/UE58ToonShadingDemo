@@ -37,6 +37,14 @@ public:
  UFUNCTION(BlueprintCallable,Category="Menu") void OpenChoice(int32 Index);
  UFUNCTION(BlueprintCallable,Category="Menu") void SelectChoice(int32 Index);
  UFUNCTION(BlueprintCallable,Category="Menu") void StartGame();
+ UFUNCTION(BlueprintCallable,Category="Story") void ContinueGame();
+ UFUNCTION(BlueprintCallable,Category="Menu") void ReturnToLogin();
+ void OpenStorySlots(bool NewGame);
+ void CloseStorySlots();
+ void ChooseStorySlot(int32 Index,bool Overwrite);
+ bool HasStory() const;
+ bool StorySlotsOpen=false;
+ void PrepareStoryTravel();
  UFUNCTION(BlueprintCallable,Category="Menu") void ReturnToMenu();
  UFUNCTION(BlueprintCallable,Category="Menu") void Quit();
  UFUNCTION(BlueprintCallable,Category="UI Audio") void PlayUISound(EWardrobeUISound Event);
@@ -75,6 +83,9 @@ protected:
  virtual void NativeDestruct() override;
  virtual void NativeTick(const FGeometry& Geometry,float DeltaSeconds) override;
 private:
+ friend class FWardrobeStoryMenuTest;
+ friend class FWardrobeDestinationMenuTest;
+ FString PendingNewGameName=TEXT("旅人");
  TSharedPtr<SWardrobeMenu> SlateMenu;
  UPROPERTY(Transient) TObjectPtr<class ULevelSequencePlayer> ClickEffectPlayer;
  UPROPERTY(Transient) TObjectPtr<class ALevelSequenceActor> ClickEffectActor;

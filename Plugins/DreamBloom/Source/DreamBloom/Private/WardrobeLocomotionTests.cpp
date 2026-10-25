@@ -1,6 +1,9 @@
 #include "WardrobeLocomotion.h"
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
+#include "WardrobeMenu.h"
+#include "WardrobeShowcase.h"
+#include "Sound/SoundBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
@@ -16,6 +19,9 @@
 #include "InputActionValue.h"
 #include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Input/Events.h"
+#include "Engine/GameInstance.h"
 #include "WardrobeFootIKNode.h"
 #include "AnimNode_KawaiiPhysics.h"
 #include "UObject/UnrealType.h"
@@ -191,5 +197,31 @@ bool FWardrobeExpandedMovementTest::RunTest(const FString&){
  PC->SetControlRotation(FRotator(0,A->GetActorRotation().Yaw,0));
  A->Settings->IdleMinInterval=A->Settings->IdleMaxInterval=.1f;Anim->NextIdleTime=.1f;Step(15,false);TestEqual(TEXT("Idle interval triggers configured variation"),Anim->MovementAction,EWardrobeMovementAction::IdleVariation);Step(2,true);TestFalse(TEXT("Movement interrupts idle variation"),Anim->MovementAction==EWardrobeMovementAction::IdleVariation);
  GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobePauseKeyTest,"DreamBloom.Locomotion.EditorSafePauseKey",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobePauseKeyTest::RunTest(const FString&){
+ auto* GI=NewObject<UGameInstance>(GEngine);GI->InitializeStandalone();auto* W=GI->GetWorld();
+ W->SetGameMode(FURL(nullptr,TEXT("/Engine/Maps/Entry?game=/Script/DreamBloom.WardrobeExplorerGameMode"),TRAVEL_Absolute));
+ auto* PC=W->SpawnActor<AWardrobeExplorerController>();PC->SetPlayer(NewObject<ULocalPlayer>(GEngine));PC->SetupInputComponent();
+ auto* MenuData=NewObject<UWardrobeMenuData>();MenuData->AudioData=NewObject<UWardrobeAudioData>();
+ MenuData->AudioData->Pause.Sound=MenuData->AudioData->Resume.Sound=LoadObject<USoundBase>(nullptr,TEXT("/Game/WardrobePinch21/Audio/Grab.Grab"));
+ GI->GetSubsystem<UWardrobeSession>()->ExplorationMenuData=MenuData;
+ auto* Audio=GI->GetSubsystem<UWardrobeAudioSubsystem>();const int32 BeforePause=Audio->PlayCount;
+ auto* Binding=PC->InputComponent->KeyBindings.FindByPredicate([](const FInputKeyBinding& B){return B.Chord.Key==EKeys::P&&B.KeyEvent==IE_Pressed;});
+ TestNotNull(TEXT("P works without editing IA_Pause or a DA"),Binding);
+ if(Binding){
+  TestTrue(TEXT("Controller consumes key to avoid duplicate pawn bindings"),Binding->bConsumeInput);
+  Binding->KeyDelegate.Execute(EKeys::P);
+  TestEqual(TEXT("Opening pause uses session WardrobeAudio once"),Audio->PlayCount,BeforePause+1);
+  TestTrue(TEXT("P opens pause and guards movement/look"),PC->bPauseMenu&&PC->IsMoveInputIgnored()&&PC->IsLookInputIgnored());
+  if(FSlateApplication::IsInitialized()){
+   const auto Focus=PC->PauseWidget;TestTrue(TEXT("Pause menu can receive keyboard focus in UI-only mode"),Focus.IsValid()&&Focus->SupportsKeyboardFocus());
+   if(Focus.IsValid())Focus->OnKeyDown(FGeometry(),FKeyEvent(EKeys::P,FModifierKeysState(),0,false,0,0));
+   TestFalse(TEXT("P closes focused pause menu"),PC->bPauseMenu);
+   TestEqual(TEXT("Resume uses session WardrobeAudio once"),Audio->PlayCount,BeforePause+2);
+   TestTrue(TEXT("Resume restores move/look input"),!PC->IsMoveInputIgnored()&&!PC->IsLookInputIgnored());
+  }
+ }
+ if(PC->bPauseMenu)PC->TogglePauseMenu();GI->Shutdown();GEngine->DestroyWorldContext(W);W->DestroyWorld(false);return true;
 }
 #endif

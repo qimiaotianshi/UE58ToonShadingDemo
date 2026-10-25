@@ -1,4 +1,5 @@
 #include "WardrobeMenu.h"
+#include "WardrobeStory.h"
 #include "WardrobeShowcase.h"
 #include "WardrobeLoading.h"
 #include "WardrobeCharacters.h"
@@ -72,7 +73,11 @@ public:
  bool bDragged=false;
  bool bPhysicsDragging=false;
  void CancelPointerGesture(){if(Owner.IsValid())Owner->EndPhysicsDrag();bPhysicsDragging=false;DragButton=FKey();bDragged=true;FSlateApplication::Get().ReleaseAllPointerCapture();}
- TSharedPtr<SBox> ChoiceHost;
+ TSharedPtr<SBox> ChoiceHost,SaveHost;
+ TSharedPtr<SVerticalBox> SaveRows;
+ TArray<FWardrobeStorySlot> Slots;
+ bool bNewStory=false;
+ int32 OverwriteSlot=INDEX_NONE;
  float Age=0;
  FSlateFontInfo Font(int32 Size)const{return FSlateFontInfo(Face,Size);}
  TSharedRef<SWidget> Label(const FString& S,int32 Size,FLinearColor C=Wardrobe::White){return SNew(STextBlock).Text(Wardrobe::T(S)).Font(Font(Size)).ColorAndOpacity(C);}
@@ -102,6 +107,25 @@ public:
   return SNew(SScrollBox).ScrollBarVisibility(EVisibility::Collapsed)+SScrollBox::Slot()[SNew(SBox).HeightOverride(FMath::DivideAndRoundUp(Count,3)*161.f)[Tiles]];
  }
  void RefreshChoices(){if(ChoiceHost){ChoiceHost->SetContent(SNullWidget::NullWidget);ChoiceHost->SetContent(BuildChoices());}}
+ void RefreshStoryRows(){
+  SaveRows->ClearChildren();
+  for(const auto& Slot:Slots){
+   const FString Detail=Slot.bExists?FString::Printf(TEXT("%s  ·  %s\n%s"),*Slot.PlayerName,*Slot.Progress.ToString(),*(Slot.SavedAt+(FDateTime::Now()-FDateTime::UtcNow())).ToString(TEXT("%Y-%m-%d %H:%M"))):TEXT("空存档");
+   const FString Title=FString::Printf(TEXT("存档 %d  %s"),Slot.Index+1,OverwriteSlot==Slot.Index?TEXT("再次点击确认覆盖"):TEXT(""));
+   SaveRows->AddSlot().AutoHeight().Padding(0,4)[SNew(SButton).ButtonStyle(&Card).IsFocusable(false).ContentPadding(16).IsEnabled(bNewStory||Slot.bValid)
+    .OnClicked_Lambda([this,Slot](){
+     if(!Owner.IsValid())return FReply::Handled();
+     if(bNewStory&&Slot.bExists&&OverwriteSlot!=Slot.Index){Owner->PlayUISound(EWardrobeUISound::Confirm);OverwriteSlot=Slot.Index;RefreshStoryRows();return FReply::Handled();}
+     Owner->ChooseStorySlot(Slot.Index,bNewStory&&Slot.bExists);return FReply::Handled();
+    })[SNew(SVerticalBox)+SVerticalBox::Slot().AutoHeight()[Label(Title,18,OverwriteSlot==Slot.Index?Wardrobe::Pink:Wardrobe::White)]
+     +SVerticalBox::Slot().AutoHeight().Padding(0,7,0,0)[Label(Detail,13,Wardrobe::Soft)]]];
+  }
+ }
+ void OpenStorySlots(bool NewGame){
+  CancelPointerGesture();bNewStory=NewGame;OverwriteSlot=INDEX_NONE;Slots.Empty();
+  if(Owner.IsValid())if(auto* Story=Owner->GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>())Slots=Story->GetSaveSlots();
+  RefreshStoryRows();
+ }
  void Construct(const FArguments& A){
   Owner=A._Owner;Resources=IPluginManager::Get().FindPlugin(TEXT("DreamBloom"))->GetBaseDir()/TEXT("Resources");
   Face=MakeShared<FCompositeFont>(NAME_None,Resources/TEXT("NotoSansSC-Regular.ttf"),EFontHinting::Default,EFontLoadingPolicy::LazyLoad);
@@ -134,18 +158,23 @@ public:
   Put(Lobby,1090,125,148,38,Label(TEXT("目的地"),23));
   Put(Lobby,1380,134,130,30,Label(TEXT("选择地图"),14,Wardrobe::Soft));
   Put(Lobby,1090,181,425,1,SNew(SImage).Image(Wardrobe::Solid()).ColorAndOpacity(Wardrobe::Border.CopyWithNewOpacity(.70f)));
-  Put(Lobby,1090,200,435,484,SAssignNew(ChoiceHost,SBox)[BuildChoices()]);
-  Put(Lobby,1090,700,427,60,SNew(STextBlock).Text_Lambda([this](){return Wardrobe::T(Owner.IsValid()?Owner->SelectionDescription():TEXT(""));}).Font(Font(12)).ColorAndOpacity(Wardrobe::Soft).AutoWrapText(true));
+  Put(Lobby,1090,200,435,390,SAssignNew(ChoiceHost,SBox)[BuildChoices()]);
+  Put(Lobby,1090,609,427,48,SNew(STextBlock).Text_Lambda([this](){return Wardrobe::T(Owner.IsValid()?Owner->SelectionDescription():TEXT(""));}).Font(Font(12)).ColorAndOpacity(Wardrobe::Soft).AutoWrapText(true));
+  Put(Lobby,1090,683,428,54,Button(TEXT("返回登录"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->ReturnToLogin();}));
+  Put(Lobby,1060,801,488,53,Button(TEXT("开始游戏"),TEXT("play"),[this](){if(Owner.IsValid())Owner->StartGame();},true));
   Put(Main,0,0,1600,900,Lobby);
   auto LoginPanel=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&!Owner->IsLoggedIn()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   Put(LoginPanel,1110,184,360,55,Label(TEXT("欢迎来到奇境"),30));
   Put(LoginPanel,1112,254,350,46,Label(TEXT("每一次相遇，都有新的风景。"),16,Wardrobe::Soft));
   Put(LoginPanel,1112,346,300,27,Label(TEXT("旅人昵称"),14));
   Put(LoginPanel,1112,385,380,60,SAssignNew(Name,SEditableTextBox).Style(&Input).HintText(Wardrobe::T(TEXT("输入名字，或直接进入"))).OnTextCommitted_Lambda([this](const FText& Text,ETextCommit::Type Kind){if(Kind==ETextCommit::OnEnter&&Owner.IsValid())Owner->Login(Text.ToString());}));
-  Put(LoginPanel,1112,482,380,58,Button(TEXT("进入奇境"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->Login(Name->GetText().ToString());},true));
+  Put(LoginPanel,1112,482,380,58,Button(Owner.IsValid()&&Owner->HasStory()?TEXT("新游戏"):TEXT("进入奇境"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->Login(Name->GetText().ToString());},true));
   Put(LoginPanel,1112,566,380,30,Label(TEXT("本地体验  ·  无需账号密码"),12,Wardrobe::Soft));
+  auto LoginStory=SNew(SHorizontalBox).Visibility_Lambda([this](){return Owner.IsValid()&&Owner->HasStory()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
+  LoginStory->AddSlot().FillWidth(1).Padding(3)[Button(TEXT("继续游戏"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->ContinueGame();})];
+  LoginStory->AddSlot().FillWidth(1).Padding(3)[Button(TEXT("读取存档"),TEXT("mountain"),[this](){if(Owner.IsValid())Owner->OpenStorySlots(false);})];
+  Put(LoginPanel,1112,627,380,54,LoginStory);
   Put(Main,0,0,1600,900,LoginPanel);
-  Put(Main,1060,801,488,53,Button(TEXT("开始游戏"),TEXT("play"),[this](){if(Owner.IsValid())Owner->StartGame();},true));
   Put(Canvas.ToSharedRef(),0,0,1600,900,Main);
   auto PlayHUD=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&(!Owner->IsMenuMap())?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   Put(PlayHUD,48,35,240,48,Button(TEXT("返回角色界面"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->ReturnToMenu();}));
@@ -157,6 +186,14 @@ public:
   Put(Exit,540,305,520,260,SNew(SBorder).BorderImage(&Panel));Put(Exit,685,344,280,40,Label(TEXT("结束本次旅程？"),25));
   Put(Exit,584,463,196,51,Button(TEXT("继续漫游"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->SetQuitPrompt(false);}));
   Put(Exit,814,463,196,51,Button(TEXT("退出游戏"),TEXT("door-open"),[this](){if(Owner.IsValid())Owner->Quit();},true));Put(Canvas.ToSharedRef(),0,0,1600,900,Exit);
+  auto Saves=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&Owner->StorySlotsOpen?EVisibility::Visible:EVisibility::Collapsed;});
+  Put(Saves,0,0,1600,900,SNew(SBorder).BorderImage(Wardrobe::Solid()).BorderBackgroundColor(Wardrobe::Color(TEXT("5E3048")).CopyWithNewOpacity(.58f)));
+  Put(Saves,440,180,720,560,SNew(SBorder).BorderImage(&Panel));
+  Put(Saves,474,212,620,44,SNew(STextBlock).Font(Font(26)).ColorAndOpacity(Wardrobe::White).Text_Lambda([this](){return Wardrobe::T(bNewStory?TEXT("新游戏 · 选择存档位置"):TEXT("读取存档"));}));
+  Put(Saves,474,276,652,356,SNew(SScrollBox)+SScrollBox::Slot()[SAssignNew(SaveRows,SVerticalBox)]);
+  Put(Saves,474,662,410,40,Label(TEXT("每场演出结束后自动保存进度"),14,Wardrobe::Soft));
+  Put(Saves,918,654,208,48,Button(TEXT("返回"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->CloseStorySlots();}));
+  Put(Canvas.ToSharedRef(),0,0,1600,900,Saves);
   ChildSlot[SNew(SScaleBox).Stretch(EStretch::ScaleToFit).HAlign(HAlign_Center).VAlign(VAlign_Center)[SNew(SBox).WidthOverride(1600).HeightOverride(900)[Canvas.ToSharedRef()]]];
  }
  virtual FReply OnPreviewMouseButtonDown(const FGeometry&,const FPointerEvent& Event)override{
@@ -166,6 +203,7 @@ public:
  virtual bool SupportsKeyboardFocus()const override{return true;}
  virtual FReply OnKeyDown(const FGeometry&,const FKeyEvent& Key)override{
   if(!Owner.IsValid())return FReply::Unhandled();
+  if(Owner->StorySlotsOpen){if(Key.GetKey()==EKeys::Escape&&!Key.IsRepeat())Owner->CloseStorySlots();return FReply::Handled();}
   if(!Owner->QuitPrompt&&Key.GetKey()==EKeys::Q){Owner->ChangeMode(Owner->CurrentMode()-1);return FReply::Handled();}
   if(!Owner->QuitPrompt&&Key.GetKey()==EKeys::E){Owner->ChangeMode(Owner->CurrentMode()+1);return FReply::Handled();}
   if(Key.GetKey()==EKeys::Escape){if(Owner->QuitPrompt)Owner->SetQuitPrompt(false);else if(!Owner->IsMenuMap())Owner->ReturnToMenu();else Owner->SetQuitPrompt(true);return FReply::Handled();}
@@ -238,12 +276,12 @@ FString UWardrobeMenu::SelectionDescription()const{
  return FString::Printf(TEXT("已选：%s\n点击开始游戏进入地图"),*ChoiceLabel(I).ToString());
 }
 void UWardrobeMenu::SelectChoice(int32 I){
- if(!IsMenuMap()||!IsLoggedIn()||QuitPrompt||I<0||I>=ChoiceCount())return;
+ if(!IsMenuMap()||!IsLoggedIn()||QuitPrompt||StorySlotsOpen||I<0||I>=ChoiceCount())return;
  PlayUISound(ChoiceReady(I)?EWardrobeUISound::MapSelect:EWardrobeUISound::Unavailable);
  if(auto* S=Session())S->SelectedMap=I;RestoreMenuFocus();
 }
 void UWardrobeMenu::StartGame(){
- if(!IsMenuMap()||QuitPrompt)return;
+ if(!IsMenuMap()||QuitPrompt||StorySlotsOpen)return;
  if(!IsLoggedIn()){Message=TEXT("请先进入奇境");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();
  if(!Loading||Loading->IsLoading())return;
@@ -259,10 +297,46 @@ void UWardrobeMenu::StartGame(){
   UE_LOG(LogTemp,Display,TEXT("WARDROBE_START map=%s"),*Item.Level.ToString());
  }
 }
+bool UWardrobeMenu::HasStory() const{return Data&&Data->StoryFlow;}
+void UWardrobeMenu::OpenStorySlots(bool NewGame){
+ if(!HasStory()||!IsMenuMap()||IsLoggedIn()||QuitPrompt||StorySlotsOpen)return;
+ if(auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(Loading->IsLoading())return;
+ auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>();
+ if(!Story->Configure(Data->StoryFlow)){Message=Story->LastError.ToString();NoticeTime=8;PlayUISound(EWardrobeUISound::Unavailable);return;}
+ PlayUISound(NewGame?EWardrobeUISound::NewGame:EWardrobeUISound::LoadGame);
+ StorySlotsOpen=true;if(SlateMenu)SlateMenu->OpenStorySlots(NewGame);RestoreMenuFocus();
+}
+void UWardrobeMenu::CloseStorySlots(){
+ if(!StorySlotsOpen)return;
+ StorySlotsOpen=false;PlayUISound(EWardrobeUISound::Back);RestoreMenuFocus();
+}
+void UWardrobeMenu::PrepareStoryTravel(){
+ StorySlotsOpen=false;if(SlateMenu)SlateMenu->CancelPointerGesture();
+ if(IsValid(StationController))StationController->SetPreviewEnabled(false);
+}
+void UWardrobeMenu::ChooseStorySlot(int32 Index,bool Overwrite){
+ if(!HasStory()||!StorySlotsOpen||!SlateMenu)return;
+ auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>();
+ const bool NewGame=SlateMenu->bNewStory;
+ const bool Success=NewGame?Story->StartNewGame(Index,PendingNewGameName,Data,Overwrite):Story->ContinueGame(Index,Data);
+ if(Success){
+  PlayUISound(EWardrobeUISound::SaveSlotSelect);
+  if(NewGame){StorySlotsOpen=false;Message=TEXT("欢迎来到奇境，")+(Session()?Session()->Name:PendingNewGameName);NoticeTime=3;RestoreMenuFocus();}
+  else PrepareStoryTravel();
+ }
+ else {Message=Story->LastError.ToString();NoticeTime=8;PlayUISound(EWardrobeUISound::Unavailable);}
+}
+void UWardrobeMenu::ContinueGame(){
+ if(!HasStory()||!IsMenuMap()||IsLoggedIn()||QuitPrompt||StorySlotsOpen)return;
+ auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>();
+ if(Story->Configure(Data->StoryFlow)&&Story->ContinueLatest(Data)){PlayUISound(EWardrobeUISound::ContinueGame);PrepareStoryTravel();}
+ else {Message=Story->LastError.ToString();NoticeTime=6;PlayUISound(EWardrobeUISound::Unavailable);}
+}
 TSharedRef<SWidget> UWardrobeMenu::RebuildWidget(){if(!Data)Data=LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));SlateMenu=SNew(SWardrobeMenu).Owner(this);return SlateMenu.ToSharedRef();}
 void UWardrobeMenu::ReleaseSlateResources(bool B){EndPhysicsDrag();Super::ReleaseSlateResources(B);SlateMenu.Reset();}
 void UWardrobeMenu::NativeConstruct(){
  Super::NativeConstruct();
+ if(HasStory())GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>()->Configure(Data->StoryFlow);
  if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->Configure(Data?Data->AudioData.Get():nullptr);
  if(IsMenuMap()){
   StationController=NewObject<UWardrobeStationController>(this);
@@ -275,9 +349,23 @@ void UWardrobeMenu::NativeConstruct(){
  if(auto* PC=GetOwningPlayer()){PC->bShowMouseCursor=true;FInputModeUIOnly Input;Input.SetWidgetToFocus(SlateMenu);Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);PC->SetInputMode(Input);}
  RestoreMenuFocus();
 }
-void UWardrobeMenu::Login(const FString& Value){PlayUISound(EWardrobeUISound::Login);if(auto* S=Session()){S->LoggedIn=true;S->Name=Value.TrimStartAndEnd().Left(16);if(S->Name.IsEmpty())S->Name=TEXT("旅人");Message=TEXT("欢迎回来，")+S->Name;}RestoreMenuFocus();NoticeTime=3;}
+void UWardrobeMenu::Login(const FString& Value){
+ if(!IsMenuMap()||IsLoggedIn()||QuitPrompt||StorySlotsOpen)return;
+ if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return;
+ PendingNewGameName=Value.TrimStartAndEnd().Left(16);if(PendingNewGameName.IsEmpty())PendingNewGameName=TEXT("旅人");
+ if(HasStory()){OpenStorySlots(true);return;}
+ PlayUISound(EWardrobeUISound::Login);if(auto* S=Session()){S->LoggedIn=true;S->Name=PendingNewGameName;Message=TEXT("欢迎回来，")+S->Name;}
+ RestoreMenuFocus();NoticeTime=3;
+}
+void UWardrobeMenu::ReturnToLogin(){
+ if(!IsMenuMap()||!IsLoggedIn()||QuitPrompt||StorySlotsOpen)return;
+ if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return;
+ if(SlateMenu)SlateMenu->CancelPointerGesture();
+ if(auto* S=Session()){S->LoggedIn=false;if(SlateMenu&&SlateMenu->Name)SlateMenu->Name->SetText(FText::FromString(S->Name));}
+ PlayUISound(EWardrobeUISound::Back);RestoreMenuFocus();Message.Empty();
+}
 void UWardrobeMenu::ChangeMode(int32 I){
- if(!IsMenuMap()||QuitPrompt||CharacterCount()==0||!IsValid(StationController)||StationController->IsTransitioning())return;
+ if(!IsMenuMap()||QuitPrompt||StorySlotsOpen||CharacterCount()==0||!IsValid(StationController)||StationController->IsTransitioning())return;
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return;
  const int32 Mode=((I%CharacterCount())+CharacterCount())%CharacterCount();
  if(Mode==CurrentMode())return;
@@ -300,9 +388,9 @@ void UWardrobeMenu::ReturnToMenu(){
 }
 void UWardrobeMenu::PlayUISound(EWardrobeUISound Event){if(GetGameInstance())if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->PlayEvent(Event);}
 void UWardrobeMenu::SetQuitPrompt(bool Enabled){if(QuitPrompt==Enabled)return;QuitPrompt=Enabled;if(Enabled&&SlateMenu)SlateMenu->CancelPointerGesture();if(IsValid(StationController))StationController->SetPreviewEnabled(!Enabled);PlayUISound(Enabled?EWardrobeUISound::Confirm:EWardrobeUISound::Cancel);}
-void UWardrobeMenu::Quit(){UKismetSystemLibrary::QuitGame(this,GetOwningPlayer(),EQuitPreference::Quit,false);}
+void UWardrobeMenu::Quit(){if(auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>())Story->SaveCheckpoint();UKismetSystemLibrary::QuitGame(this,GetOwningPlayer(),EQuitPreference::Quit,false);}
 bool UWardrobeMenu::CanPreviewInput()const{
- if(!IsMenuMap()||QuitPrompt||!IsValid(StationController)||!StationController->CanManipulate())return false;
+ if(!IsMenuMap()||QuitPrompt||StorySlotsOpen||!IsValid(StationController)||!StationController->CanManipulate())return false;
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return false;
  return true;
 }
@@ -335,6 +423,7 @@ void UWardrobeMenu::NativeTick(const FGeometry& G,float Dt){
  const bool LoadingActive=Loading&&Loading->IsLoading();
  if(ClickEffectPlayer){ClickEffectAge+=Dt;if(LoadingActive||!ClickEffectPlayer->IsPlaying()||ClickEffectAge>=(Data&&Data->ClickEffect?FMath::Max(.1f,Data->ClickEffect->MaxDuration):5.f))StopClickEffect();}
  if(IsValid(StationController)){
+  // A save-slot overlay blocks gestures through CanPreviewInput, not Sequence playback.
   StationController->SetPreviewEnabled(!LoadingActive&&!QuitPrompt);
   StationController->Tick(Dt);
   Showcase=StationController->GetActiveCharacter();
