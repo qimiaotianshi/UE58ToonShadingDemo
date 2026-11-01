@@ -12,6 +12,8 @@
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "WorldPartition/WorldPartitionSubsystem.h"
 #include "ContentStreaming.h"
@@ -190,6 +192,35 @@ void UWardrobeLoadingSubsystem::GuardInput()
   PC->SetIgnoreMoveInput(true);PC->SetIgnoreLookInput(true);PC->FlushPressedKeys();
  }
  if(PC)PC->bShowMouseCursor=Visual->Slow.load();
+ GuardCharacterMovement(PC?Cast<ACharacter>(PC->GetPawn()):nullptr);
+}
+
+void UWardrobeLoadingSubsystem::GuardCharacterMovement(ACharacter* Character)
+{
+ if(GuardedCharacter.Get()!=Character){
+  ReleaseCharacterMovement();
+  if(Character)if(auto* Movement=Character->GetCharacterMovement()){
+   GuardedCharacter=Character;
+   SavedMovementMode=uint8(Movement->MovementMode);
+   SavedCustomMovementMode=Movement->CustomMovementMode;
+   // Input suppression and zero velocity do not stop gravity. The destination's
+   // level instances may create road collision after its pawn has already spawned.
+   Movement->DisableMovement();
+  }
+ }
+ if(GuardedCharacter.IsValid())if(auto* Movement=GuardedCharacter->GetCharacterMovement()){
+  if(Movement->MovementMode!=MOVE_None)Movement->DisableMovement();
+ }
+}
+
+void UWardrobeLoadingSubsystem::ReleaseCharacterMovement()
+{
+ if(GuardedCharacter.IsValid())if(auto* Movement=GuardedCharacter->GetCharacterMovement()){
+  Movement->StopMovementImmediately();
+  Movement->SetMovementMode(EMovementMode(SavedMovementMode),SavedCustomMovementMode);
+ }
+ GuardedCharacter.Reset();
+ SavedMovementMode=SavedCustomMovementMode=0;
 }
 
 void UWardrobeLoadingSubsystem::OnPostLoadMap(UWorld* World)
@@ -307,6 +338,7 @@ void UWardrobeLoadingSubsystem::Finish(bool bFailed)
   GuardedController->bShowMouseCursor=bSavedCursor;
  }
  GuardedController.Reset();
+ ReleaseCharacterMovement();
  if(FSlateApplication::IsInitialized()){
   TArray<UUserWidget*> Menus;
   UWidgetBlueprintLibrary::GetAllWidgetsOfClass(GetGameInstance(),Menus,UWardrobeMenu::StaticClass(),true);

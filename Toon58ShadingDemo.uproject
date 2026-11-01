@@ -53,10 +53,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "MetaHumanCharacter",
-			"Enabled": true
-		},
-		{
 			"Name": "SunPosition",
 			"Enabled": true
 		},

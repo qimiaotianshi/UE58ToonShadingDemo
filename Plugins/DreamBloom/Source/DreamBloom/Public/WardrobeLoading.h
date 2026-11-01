@@ -34,11 +34,14 @@ public:
 
 private:
  friend class FWardrobeDestinationMenuTest;
+ friend class FWardrobeLoadingMovementTest;
  bool Tick(float DeltaSeconds);
  void OnPostLoadMap(UWorld* World);
  void OnTravelFailure(UWorld* World, ETravelFailure::Type Type, const FString& Error);
  void Finish(bool bFailed = false);
  void GuardInput();
+ void GuardCharacterMovement(class ACharacter* Character);
+ void ReleaseCharacterMovement();
  bool IsSceneReady(UWorld* World) const;
  void ShowOverlay();
  /** Drain level streaming and the render command queue so OpenLevel's teardown starts from a quiet scene. */
@@ -50,6 +53,8 @@ private:
  TWeakPtr<SWidget> PreviousFocus;
  TWeakObjectPtr<UWorld> DestinationWorld;
  TWeakObjectPtr<class APlayerController> GuardedController;
+ TWeakObjectPtr<class ACharacter> GuardedCharacter;
+ uint8 SavedMovementMode=0, SavedCustomMovementMode=0;
  FTSTicker::FDelegateHandle TickHandle;
  FDelegateHandle PostLoadHandle, FailureHandle;
  FString PackageName, TravelOptions;
