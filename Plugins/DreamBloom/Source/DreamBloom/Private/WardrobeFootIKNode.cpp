@@ -142,7 +142,7 @@ void FAnimNode_WardrobeFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  const FCompactPose& Pose=O.Pose.GetPose();
  const auto& Bones=Pose.GetBoneContainer();const FBoneReference* Feet[]={&LeftFoot,&RightFoot};
  const auto PelvisIndex=Pelvis.GetCompactPoseIndex(Bones);
- if(!WardrobeAnimGuard::IsUsable(Pose,PelvisIndex)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobeFootIK"),PelvisIndex,Pose.GetNumBones());return;}
+ if(!WardrobeAnimGuard::IsUsable(Pose,PelvisIndex)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobeFootIK"),Pose,PelvisIndex);return;}
  if(bRuntimeInAir){
   PelvisOffset=0;for(int I=0;I<2;I++){SmoothedOffset[I]=FVector::ZeroVector;SmoothedRotation[I]=FQuat::Identity;bFootLocked[I]=bLockReleasing[I]=false;bLockCanAcquire[I]=true;}return;
  }

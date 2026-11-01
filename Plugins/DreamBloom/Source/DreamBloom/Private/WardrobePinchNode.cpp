@@ -22,6 +22,6 @@ void FAnimNode_WardrobePinch::EvaluateSkeletalControl_AnyThread(FComponentSpaceP
  // on a worker thread and takes the editor with it, so bail out before calling it.
  const FCompactPose& Pose=Output.Pose.GetPose();
  const FCompactPoseBoneIndex Index=BoneToModify.GetCompactPoseIndex(Pose.GetBoneContainer());
- if(!WardrobeAnimGuard::IsUsable(Pose,Index)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobePinch"),Index,Pose.GetNumBones());return;}
+ if(!WardrobeAnimGuard::IsUsable(Pose,Index)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobePinch"),Pose,Index);return;}
  FAnimNode_ModifyBone::EvaluateSkeletalControl_AnyThread(Output,Out);
 }

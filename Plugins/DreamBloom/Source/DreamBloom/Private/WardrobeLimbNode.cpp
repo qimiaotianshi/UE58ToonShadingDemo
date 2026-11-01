@@ -21,7 +21,7 @@ void FAnimNode_WardrobeLimbIK::EvaluateSkeletalControl_AnyThread(FComponentSpace
  // IsValidIndex() only proves the bone is addressable. Every parent on the way to the root must be
  // addressable too, otherwise GetComponentSpaceTransform below stops inside TArray::RangeCheck.
  auto ValidIndex=[&](FCompactPoseBoneIndex I){return WardrobeAnimGuard::IsUsable(Pose,I);};
- if(!ValidIndex(U)||!ValidIndex(J)||!ValidIndex(E)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobeLimbIK"),U,Pose.GetNumBones());return;}
+ if(!ValidIndex(U)||!ValidIndex(J)||!ValidIndex(E)){WardrobeAnimGuard::ReportBrokenChain(TEXT("WardrobeLimbIK"),Pose,U);return;}
  auto Descendant=[&](FCompactPoseBoneIndex Child,FCompactPoseBoneIndex Parent){
   if(!ValidIndex(Child)||!ValidIndex(Parent))return false;
   while(ValidIndex(Child)){Child=B.GetParentBoneIndex(Child);if(!ValidIndex(Child))return false;if(Child==Parent)return true;}
