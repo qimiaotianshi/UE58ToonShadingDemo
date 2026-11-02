@@ -1,0 +1,419 @@
+{
+  "world": "/Game/Aki/Map/MainMap.MainMap",
+  "camera": {
+    "location": {
+      "x": -2279.3203125,
+      "y": 480.5003356933594,
+      "z": 418.8599853515625
+    },
+    "rotation": {
+      "pitch": 38.50571823120117,
+      "yaw": -97.24634552001953,
+      "roll": 1.3473505973815918
+    }
+  },
+  "actors": [
+    {
+      "name": "LensFlareActor",
+      "label": "LensFlareActor",
+      "components": [
+        {
+          "name": "StaticMesh_LensFlareGhost",
+          "mesh": "/Game/Aki/Render/Common/MobileLensFlare/SM_LensFlare_Ghost_01.SM_LensFlare_Ghost_01",
+          "materials": [
+            {
+              "path": "/Game/Aki/Map/MainMap.MainMap:PersistentLevel.LensFlareActor.StaticMesh_LensFlareGhost.MaterialInstanceDynamic_0",
+              "base": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Ghost.M_MobileLensFlare_Ghost",
+              "params": {
+                "SceneSampleLumThresholdRange": 1.0,
+                "DistanceFadeScale": 1.0,
+                "LensflareDensity": 1.0,
+                "ReverseDistanceFadeFactor": 4.0,
+                "SequenceOpacity": 1.0,
+                "PosScaleOpacityBias": 0.0,
+                "Flare Line Curve": 50.0,
+                "OffsetBias": 0.44999998807907104,
+                "ReverseDistanceFadeBias": 1.0,
+                "ReversedViewAttPow": 0.20000000298023224,
+                "SceneSampleIndex": 0.0,
+                "Scale": 0.20000000298023224,
+                "RampSample": 0.5,
+                "Depth": 15.0,
+                "ViewAttPow": 2.0,
+                "Max": 0.7070000171661377,
+                "SampleRadius": 12.0,
+                "ReverseDistanceFadeScale": 1.0,
+                "SequenceScale": 1.0,
+                "PosScaleOpacityFactor": 10.0,
+                "FixedRotation": 0.0,
+                "IsSunLensflare": 1.0,
+                "SkyDepth": 500000.0,
+                "OffsetScale": 2.0,
+                "NoSampleOpacity": 1.0,
+                "Flare Line Intensity": 9.0,
+                "DistanceFactor": 0.0,
+                "Opacity": 2.0,
+                "BackgroundColorTintIntensity": 1.0,
+                "SceneSampleLumThreshold": 2.0,
+                "UseFixedRotation": 0.0,
+                "ScreenCenterBias": {
+                  "r": 0.0,
+                  "g": 0.0,
+                  "b": 0.0,
+                  "a": 1.0
+                },
+                "SequenceColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "CustomActorPosition": {
+                  "r": 0.0,
+                  "g": 0.0,
+                  "b": 0.0,
+                  "a": 0.0
+                },
+                "ElementScale": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 0.0,
+                  "a": 1.0
+                },
+                "BaseColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "ColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                }
+              }
+            },
+            {
+              "path": "/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial",
+              "base": "/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial",
+              "params": {}
+            }
+          ]
+        },
+        {
+          "name": "StaticMesh_LensFlareHalo",
+          "mesh": "/Game/Aki/Scene/Assets/Common/LightFog/Mesh/SM_Ird_Lig_02CS.SM_Ird_Lig_02CS",
+          "materials": [
+            {
+              "path": "/Game/Aki/Map/MainMap.MainMap:PersistentLevel.LensFlareActor.StaticMesh_LensFlareHalo.MaterialInstanceDynamic_0",
+              "base": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Halo.M_MobileLensFlare_Halo",
+              "params": {
+                "SceneSampleLumThresholdRange": 1.0,
+                "DistanceFadeScale": 1.0,
+                "LensflareDensity": 1.0,
+                "ReverseDistanceFadeFactor": 4.0,
+                "SequenceOpacity": 1.0,
+                "PosScaleOpacityBias": 0.0,
+                "ColorBiasG": -0.05000000074505806,
+                "OffsetBias": 0.0,
+                "ReverseDistanceFadeBias": 1.0,
+                "HaloPosAttScale": 2.0,
+                "SceneSampleIndex": 0.0,
+                "Scale": 1.2340660095214844,
+                "Depth": 15.0,
+                "ViewAttPow": 5.0,
+                "Max": 0.7070000171661377,
+                "SampleRadius": 12.0,
+                "ReverseDistanceFadeScale": 1.0,
+                "SequenceScale": 1.0,
+                "PosScaleOpacityFactor": 10.0,
+                "HaloPosAttPow": 5.0,
+                "FixedRotation": 0.0,
+                "IsSunLensflare": 1.0,
+                "SkyDepth": 500000.0,
+                "OffsetScale": 1.7999999523162842,
+                "NoSampleOpacity": 1.0,
+                "DistanceFactor": 0.0,
+                "Opacity": 3.0,
+                "BackgroundColorTintIntensity": 1.0,
+                "ColorBiasB": -0.15000000596046448,
+                "SceneSampleLumThreshold": 2.0,
+                "UseFixedRotation": 0.0,
+                "ScreenCenterBias": {
+                  "r": 0.0,
+                  "g": 0.0,
+                  "b": 0.0,
+                  "a": 1.0
+                },
+                "SequenceColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "CustomActorPosition": {
+                  "r": 0.0,
+                  "g": 0.0,
+                  "b": 0.0,
+                  "a": 0.0
+                },
+                "ElementScale": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 0.0,
+                  "a": 1.0
+                },
+                "BaseColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "ColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "StaticMesh_LensFlareGlare",
+          "mesh": "/Game/Aki/Render/Common/MobileLensFlare/SM_LensFlareGlare_04.SM_LensFlareGlare_04",
+          "materials": [
+            {
+              "path": "/Game/Aki/Map/MainMap.MainMap:PersistentLevel.LensFlareActor.StaticMesh_LensFlareGlare.MaterialInstanceDynamic_0",
+              "base": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Glare.M_MobileLensFlare_Glare",
+              "params": {
+                "SceneSampleLumThresholdRange": 1.0,
+                "DistanceFadeScale": 1.0,
+                "LensflareDensity": 1.0,
+                "ReverseDistanceFadeFactor": 4.0,
+                "Rotation": 0.0,
+                "SequenceOpacity": 1.0,
+                "DynamicRotationFix": 1.0,
+                "ReverseDistanceFadeBias": 1.0,
+                "SceneSampleIndex": 0.0,
+                "UseRainbowColor": 0.5047619938850403,
+                "GlareInner": 0.0,
+                "Depth": 15.0,
+                "ViewAttPow": 2.0,
+                "Color2": 0.15000000596046448,
+                "Max": 0.7070000171661377,
+                "SampleRadius": 12.0,
+                "ReverseDistanceFadeScale": 1.0,
+                "GlareOuter": 1.0,
+                "IsSunLensflare": 1.0,
+                "SkyDepth": 500000.0,
+                "NoSampleOpacity": 1.0,
+                "DistanceFactor": 0.0,
+                "Opacity": 2.0,
+                "Color1": 0.10000000149011612,
+                "GlareSharpness": 1.600000023841858,
+                "BackgroundColorTintIntensity": 1.0,
+                "SceneSampleLumThreshold": 2.0,
+                "SequenceColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "CustomActorPosition": {
+                  "r": 0.0,
+                  "g": 0.0,
+                  "b": 0.0,
+                  "a": 0.0
+                },
+                "Scale": {
+                  "r": 10.0,
+                  "g": 10.0,
+                  "b": 0.0,
+                  "a": 1.0
+                },
+                "BaseColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "ColorTint": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 1.0,
+                  "a": 1.0
+                },
+                "SequenceScale": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 0.0,
+                  "a": 0.0
+                },
+                "Color": {
+                  "r": 0.7835379838943481,
+                  "g": 0.7379099726676941,
+                  "b": 0.5457239747047424,
+                  "a": 1.0
+                },
+                "UVScaleBias": {
+                  "r": 1.0,
+                  "g": 1.0,
+                  "b": 0.0,
+                  "a": 0.0
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "/Game/Aki/Audio/AudioMaterials/AudioMat_Concrete",
+      "type": "PhysicalMaterial"
+    },
+    {
+      "path": "/Game/Aki/Render/Common/MobileLensFlare/SM_LensFlareGlare_04",
+      "type": "StaticMesh"
+    },
+    {
+      "path": "/Game/Aki/Render/Common/MobileLensFlare/SM_LensFlare_Ghost_01",
+      "type": "StaticMesh"
+    },
+    {
+      "path": "/Game/Aki/Render/Common/T_DefaultColorWhite_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Render/Data/MPC_Sequence",
+      "type": "MaterialParameterCollection"
+    },
+    {
+      "path": "/Game/Aki/Render/DefaultGI/LensFlare/DA_DefaultLensFlare_01",
+      "type": "PDA_ModelLensFlareConfig_C"
+    },
+    {
+      "path": "/Game/Aki/Render/DefaultGI/LensFlare/DA_DefaultLensFlare_02",
+      "type": "PDA_ModelLensFlareConfig_C"
+    },
+    {
+      "path": "/Game/Aki/Render/DefaultGI/LensFlare/DA_DefaultLensFlare_03",
+      "type": "PDA_ModelLensFlareConfig_C"
+    },
+    {
+      "path": "/Game/Aki/Render/DefaultGI/LensFlare/DA_DefaultLensFlare_04",
+      "type": "PDA_ModelLensFlareConfig_C"
+    },
+    {
+      "path": "/Game/Aki/Render/RuntimeBP/Scene/LensFlare/PDA_ModelLensFlareConfig",
+      "type": "Blueprint"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/MF_LensflareColorAndMask",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/MF_LensflareSceneSampleResult",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/MF_MobileLensFlare_Cull",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/MF_MobileLensFlare_Offset",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/MPC_LensFlare_Seq",
+      "type": "MaterialParameterCollection"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Ghost",
+      "type": "Material"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Glare",
+      "type": "Material"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Halo",
+      "type": "Material"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/PostProcess/LensFlare/MF_DepthOcclusion",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Render/Shaders/PostProcess/LensFlare/MF_SampleSceneDepthUV",
+      "type": "MaterialFunction"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02J_01",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02K_01",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02L_01",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02M_01",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02U_02",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02V_01",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mesh/SM_Ird_Lig_02CS",
+      "type": "StaticMesh"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Mesh/SM_Ird_Lig_02ES",
+      "type": "StaticMesh"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02G_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02H_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02I_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02J_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02R_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02Z_D",
+      "type": "Texture2D"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Levels/LiNaXiTa/DiSiTaiDi/LightFog/Mat/MI_Ird2_Spe_01D_02",
+      "type": "MaterialInstanceConstant"
+    },
+    {
+      "path": "/Game/Aki/Scene/Assets/Levels/LiNaXiTa/DiSiTaiDi/LightFog/Tex/T_Ird_Lig_10A_D",
+      "type": "Texture2D"
+    }
+  ]
+}

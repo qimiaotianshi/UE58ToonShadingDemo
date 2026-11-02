@@ -1,0 +1,30 @@
+Begin Object Class=/Script/Engine.MaterialInstanceConstant Name="MI_Ird_Lig_02L_01"
+   Begin Object Class=/Script/UnrealEd.SceneThumbnailInfoWithPrimitive Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   Begin Object Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   ParameterStateId=4589C7854F8F59ECA22B0D89962CA461
+   PhysMaterial=PhysicalMaterial'"/Game/Aki/Audio/AudioMaterials/AudioMat_Concrete.AudioMat_Concrete"'
+   Parent=Material'"/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Halo.M_MobileLensFlare_Halo"'
+   bHasStaticPermutationResource=True
+   ScalarParameterValues(0)=(ParameterInfo=(Name="ColorBiasB"),ParameterValue=-0.150000,ExpressionGUID=866D9C3748650C5D3266C5BE9EA4C7FB)
+   ScalarParameterValues(1)=(ParameterInfo=(Name="ColorBiasG"),ParameterValue=-0.050000,ExpressionGUID=95B8CD934252C6475F52C2B63B2D2C7D)
+   ScalarParameterValues(2)=(ParameterInfo=(Name="OffsetBias"),ExpressionGUID=206F9B444BC99375C623A19940869B90)
+   ScalarParameterValues(3)=(ParameterInfo=(Name="OffsetScale"),ParameterValue=1.800000,ExpressionGUID=783EA44D46C8D688EF63E5BD74F68186)
+   ScalarParameterValues(4)=(ParameterInfo=(Name="Opacity"),ParameterValue=3.000000,ExpressionGUID=8C94EA19408FD01664155E8D86884404)
+   ScalarParameterValues(5)=(ParameterInfo=(Name="Scale"),ParameterValue=1.234066,ExpressionGUID=ED4A0A2C462BE098B18C848E8696AA1E)
+   ScalarParameterValues(6)=(ParameterInfo=(Name="Depth"),ParameterValue=15.000000,ExpressionGUID=F0E586A34B00722BD6C703A78D51B1C4)
+   ScalarParameterValues(7)=(ParameterInfo=(Name="HaloPosAttPow"),ParameterValue=5.000000,ExpressionGUID=7842F2634B2DFCEB5FFE5891172F409C)
+   ScalarParameterValues(8)=(ParameterInfo=(Name="HaloPosAttScale"),ParameterValue=2.000000,ExpressionGUID=F3072CBD421FCB601279BC9F4C720938)
+   ScalarParameterValues(9)=(ParameterInfo=(Name="SampleRadius"),ParameterValue=12.000000,ExpressionGUID=35739F814145D3DE207AF39816E3B459)
+   ScalarParameterValues(10)=(ParameterInfo=(Name="ViewAttPow"),ParameterValue=5.000000,ExpressionGUID=6C25D45D47BDE6F30FC5B49EECD92AD1)
+   ScalarParameterValues(11)=(ParameterInfo=(Name="RefractionDepthBias"))
+   TextureParameterValues(0)=(ParameterInfo=(Name="Texture"),ParameterValue=Texture2D'"/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02I_D.T_Ird_Lig_02I_D"',ExpressionGUID=7C01A0A54A159066794C8BB467314325)
+   BasePropertyOverrides=(bOverride_BlendMode=True,TwoSided=True,bEnableSeparateTranslucency=True,bEnableAdaptiveTessellation=True,BlendMode=BLEND_Additive,ShadingModel=MSM_Unlit,OpacityMaskClipValue=0.333300,RenderQueue=200,bSupportsUBInstancing=True,bUseFullPrecision=True)
+   ReferencedTextureGuids(0)=227B16DA4F834C24B18ED98597687D9F
+   StaticParameters=(StaticSwitchParameters=((Value=True,ParameterInfo=(Name="UseTexture"),bOverride=True,ExpressionGUID=A55B6A3E4DEC793EEC7A819C15FB5DEE)))
+   CachedReferencedTextures(0)=Texture2D'"/Engine/EngineResources/DefaultTexture.DefaultTexture"'
+   CachedReferencedTextures(1)=Texture2D'"/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"'
+   ThumbnailInfo=SceneThumbnailInfoWithPrimitive'"SceneThumbnailInfoWithPrimitive_0"'
+   LightingGuid=940E99F542E19E23C0562AB99CCDE510
+End Object

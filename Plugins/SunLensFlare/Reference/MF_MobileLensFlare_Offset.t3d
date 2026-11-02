@@ -1,0 +1,894 @@
+Begin Object Class=/Script/Engine.MaterialFunction Name="MF_MobileLensFlare_Offset"
+   Begin Object Class=/Script/Engine.MaterialExpressionAdd Name="MaterialExpressionAdd_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAdd Name="MaterialExpressionAdd_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAdd Name="MaterialExpressionAdd_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_3"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_4"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_5"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionAppendVector Name="MaterialExpressionAppendVector_6"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_3"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_4"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_5"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionComponentMask Name="MaterialExpressionComponentMask_6"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionConstant Name="MaterialExpressionConstant_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionConstant Name="MaterialExpressionConstant_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionConstant Name="MaterialExpressionConstant_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionConstant3Vector Name="MaterialExpressionConstant3Vector_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionCosine Name="MaterialExpressionCosine_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionDistance Name="MaterialExpressionDistance_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionDivide Name="MaterialExpressionDivide_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionDotProduct Name="MaterialExpressionDotProduct_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionInput Name="MaterialExpressionFunctionInput_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionInput Name="MaterialExpressionFunctionInput_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionInput Name="MaterialExpressionFunctionInput_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionInput Name="MaterialExpressionFunctionInput_3"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionInput Name="MaterialExpressionFunctionInput_4"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionOutput Name="MaterialExpressionFunctionOutput_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionFunctionOutput Name="MaterialExpressionFunctionOutput_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionKuroMainLightDirection Name="MaterialExpressionKuroMainLightDirection_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionLinearInterpolate Name="MaterialExpressionLinearInterpolate_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionLinearInterpolate Name="MaterialExpressionLinearInterpolate_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionLinearInterpolate Name="MaterialExpressionLinearInterpolate_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_10"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_3"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_4"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_5"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_6"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_7"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_8"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionMultiply Name="MaterialExpressionMultiply_9"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionNamedRerouteDeclaration Name="MaterialExpressionNamedRerouteDeclaration_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionNamedRerouteUsage Name="MaterialExpressionNamedRerouteUsage_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionNamedRerouteUsage Name="MaterialExpressionNamedRerouteUsage_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionNormalize Name="MaterialExpressionNormalize_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionNormalize Name="MaterialExpressionNormalize_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionReroute Name="MaterialExpressionReroute_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionReroute Name="MaterialExpressionReroute_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionSaturate Name="MaterialExpressionSaturate_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_3"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_4"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionSine Name="MaterialExpressionSine_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionStaticSwitchParameter Name="MaterialExpressionStaticSwitchParameter_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionStaticSwitchParameter Name="MaterialExpressionStaticSwitchParameter_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionSubtract Name="MaterialExpressionSubtract_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionSubtract Name="MaterialExpressionSubtract_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionSubtract Name="MaterialExpressionSubtract_2"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionTextureCoordinate Name="MaterialExpressionTextureCoordinate_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionTransform Name="MaterialExpressionTransform_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionTransformPosition Name="MaterialExpressionTransformPosition_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionVectorParameter Name="MaterialExpressionVectorParameter_0"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionVectorParameter Name="MaterialExpressionVectorParameter_1"
+   End Object
+   Begin Object Class=/Script/Engine.MaterialExpressionWorldPosition Name="MaterialExpressionWorldPosition_0"
+   End Object
+   Begin Object Class=/Script/UnrealEd.SceneThumbnailInfoWithPrimitive Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   Begin Object Class=/Script/Engine.Material Name="Material_0"
+   End Object
+   Begin Object Name="MaterialExpressionAdd_0"
+      A=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_2"')
+      B=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_0"')
+      MaterialExpressionEditorX=-416
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=ABA9F48D480988905C4448B3FCC27E63
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAdd_1"
+      A=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_4"')
+      B=(Expression=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_0"')
+      MaterialExpressionEditorX=-208
+      MaterialExpressionEditorY=16
+      MaterialExpressionGuid=6B471D384BC2E401132669B5B2F71363
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAdd_2"
+      A=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_4"')
+      B=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_5"')
+      MaterialExpressionEditorX=-1136
+      MaterialExpressionEditorY=-528
+      MaterialExpressionGuid=730F31FF450CCD2C1C93848EA89799DD
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_0"
+      A=(Expression=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_2"')
+      B=(Expression=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_0"')
+      MaterialExpressionEditorX=-1008
+      MaterialExpressionEditorY=-352
+      MaterialExpressionGuid=19B635E841C95A28B7859C82E3B47CB1
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_1"
+      A=(Expression=MaterialExpressionSine'"MF_MobileLensFlare_Offset:MaterialExpressionSine_0"')
+      B=(Expression=MaterialExpressionReroute'"MF_MobileLensFlare_Offset:MaterialExpressionReroute_2"')
+      MaterialExpressionEditorX=-1968
+      MaterialExpressionEditorY=-880
+      MaterialExpressionGuid=876E19FE45E334542315888668FA4BE1
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_2"
+      A=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_5"')
+      B=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_6"')
+      MaterialExpressionEditorX=-1840
+      MaterialExpressionEditorY=-192
+      MaterialExpressionGuid=0D3F1263439CCCF7232A1B8F328F97C3
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_3"
+      A=(Expression=MaterialExpressionReroute'"MF_MobileLensFlare_Offset:MaterialExpressionReroute_2"')
+      B=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_3"')
+      MaterialExpressionEditorX=-1984
+      MaterialExpressionEditorY=-656
+      MaterialExpressionGuid=876E19FE45E334542315888668FA4BE1
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_4"
+      A=(Expression=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_0"',OutputIndex=1,Mask=1,MaskR=1)
+      B=(Expression=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_0"',OutputIndex=2,Mask=1,MaskG=1)
+      MaterialExpressionEditorX=-3264
+      MaterialExpressionEditorY=224
+      MaterialExpressionGuid=ACC4757E49C9CF51581E0FAE623726DA
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_5"
+      A=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_7"')
+      B=(Expression=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_2"')
+      MaterialExpressionEditorX=-2928
+      MaterialExpressionEditorY=224
+      MaterialExpressionGuid=ACC4757E49C9CF51581E0FAE623726DA
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionAppendVector_6"
+      A=(Expression=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_1"',OutputIndex=1,Mask=1,MaskR=1)
+      B=(Expression=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_1"',OutputIndex=2,Mask=1,MaskG=1)
+      MaterialExpressionEditorX=-3313
+      MaterialExpressionEditorY=-658
+      MaterialExpressionGuid=96BFCB7E498152B68FD796A48C56DEE0
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_0"
+      Input=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_5"')
+      R=True
+      G=True
+      MaterialExpressionEditorX=-2752
+      MaterialExpressionEditorY=96
+      MaterialExpressionGuid=9850EE9F4B63E1EF928CDB83066302AD
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_2"
+      Input=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_0"')
+      R=True
+      G=True
+      MaterialExpressionEditorX=-2784
+      MaterialExpressionEditorY=-144
+      MaterialExpressionGuid=9850EE9F4B63E1EF928CDB83066302AD
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_3"
+      Input=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_9"')
+      G=True
+      MaterialExpressionEditorX=-2912
+      MaterialExpressionEditorY=-528
+      MaterialExpressionGuid=9D1072DF4F9092C1CE49E292E7BC096B
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_4"
+      Input=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_9"')
+      R=True
+      MaterialExpressionEditorX=-2912
+      MaterialExpressionEditorY=-416
+      MaterialExpressionGuid=9D1072DF4F9092C1CE49E292E7BC096B
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_5"
+      Input=(Expression=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_2"')
+      G=True
+      MaterialExpressionEditorX=-2144
+      MaterialExpressionEditorY=-192
+      MaterialExpressionGuid=EEAB4AE24DE3539C5E5ED0915E9705B0
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionComponentMask_6"
+      Input=(Expression=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_2"')
+      R=True
+      MaterialExpressionEditorX=-2144
+      MaterialExpressionEditorY=-112
+      MaterialExpressionGuid=EEAB4AE24DE3539C5E5ED0915E9705B0
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionConstant_0"
+      MaterialExpressionEditorX=-1200
+      MaterialExpressionEditorY=-224
+      MaterialExpressionGuid=38FADAAB4CAB034C4C98C7BE0BECE76A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionConstant_1"
+      R=1.000000
+      MaterialExpressionEditorX=-772
+      MaterialExpressionEditorY=802
+      MaterialExpressionGuid=5EAC6BAF4ADE55AD4CA1918B9B75AECF
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionConstant_2"
+      R=-1.000000
+      MaterialExpressionEditorX=-3040
+      MaterialExpressionEditorY=320
+      MaterialExpressionGuid=03AFCF094FECA81CB886478D66ABE26A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionConstant3Vector_1"
+      Constant=(R=0.000000,G=0.000000,B=1.000000,A=0.000000)
+      MaterialExpressionEditorX=-2128
+      MaterialExpressionEditorY=272
+      MaterialExpressionGuid=5792245D4FBEB539396363A889350AE1
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionCosine_0"
+      Input=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_1"')
+      MaterialExpressionEditorX=-2400
+      MaterialExpressionEditorY=-768
+      MaterialExpressionGuid=4D57AC9D4272D114CD4D0EB8AAFB0B9B
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionDistance_0"
+      A=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_2"')
+      B=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_0"')
+      MaterialExpressionEditorX=-2592
+      MaterialExpressionEditorY=-48
+      MaterialExpressionGuid=C668B48D490F6D5EE1C804A4FBBC861C
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionDivide_1"
+      A=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_0"')
+      B=(Expression=MaterialExpressionDotProduct'"MF_MobileLensFlare_Offset:MaterialExpressionDotProduct_0"')
+      MaterialExpressionEditorX=-1680
+      MaterialExpressionEditorY=160
+      MaterialExpressionGuid=7485E6834C99DCFAD2EC4B94BCD3B8E4
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionDotProduct_0"
+      A=(Expression=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_0"')
+      B=(Expression=MaterialExpressionConstant3Vector'"MF_MobileLensFlare_Offset:MaterialExpressionConstant3Vector_1"')
+      MaterialExpressionEditorX=-1872
+      MaterialExpressionEditorY=192
+      MaterialExpressionGuid=9A1E7B904A159E1E4945D0BD33757934
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionInput_0"
+      Preview=(Expression=MaterialExpressionTransform'"MF_MobileLensFlare_Offset:MaterialExpressionTransform_0"')
+      InputName="CameraSpaceLightDirection"
+      Id=BA9AEB264DDCFBA96F5EF0BA0C278262
+      MaterialExpressionEditorX=-3312
+      MaterialExpressionEditorY=-16
+      MaterialExpressionGuid=2FA078C345A0138F8B84C68E3E0D9290
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionInput_1"
+      InputName="Offset"
+      Id=DC8616A042047E9584ED08AB2CBD90EF
+      InputType=FunctionInput_Scalar
+      SortPriority=1
+      MaterialExpressionEditorX=-2304
+      MaterialExpressionEditorY=208
+      MaterialExpressionGuid=9BB94C7A4631256CC3ABB59A0777744A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionInput_2"
+      InputName="Scale"
+      Id=4DD443C040376F17089C5687DED79398
+      InputType=FunctionInput_Scalar
+      SortPriority=2
+      MaterialExpressionEditorX=-1824
+      MaterialExpressionEditorY=512
+      MaterialExpressionGuid=9B702F654F30497ABB7E0A9E0139B4FD
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionInput_3"
+      Preview=(Expression=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_1"')
+      InputName="LocalCoord"
+      Id=930F7FF446A1F5227CAD0AAFF7984AD9
+      InputType=FunctionInput_Vector2
+      bUsePreviewValueAsDefault=True
+      MaterialExpressionEditorX=-3456
+      MaterialExpressionEditorY=-496
+      MaterialExpressionGuid=8F56127E4498A21D92B4388467C250C8
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionInput_4"
+      InputName="WPOThrow"
+      Id=159EF07541E90E0EC6CFBEBF1EF3A0DE
+      MaterialExpressionEditorX=-556
+      MaterialExpressionEditorY=-146
+      MaterialExpressionGuid=0D43BFEB42B2FC156076A1BF4E9975D9
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionOutput_0"
+      OutputName="Offset"
+      A=(Expression=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_0"')
+      bLastPreviewed=True
+      Id=FA88785A4524DF801ECFA991DF17E0E7
+      MaterialExpressionEditorX=784
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=692ADE2C4BA96FFFBB3845907811F95E
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionFunctionOutput_1"
+      OutputName="OpacityScale"
+      A=(Expression=MaterialExpressionStaticSwitchParameter'"MF_MobileLensFlare_Offset:MaterialExpressionStaticSwitchParameter_1"')
+      Id=77B7F0D94EE1A04910DF9DADDEBBA621
+      MaterialExpressionEditorX=-336
+      MaterialExpressionEditorY=688
+      MaterialExpressionGuid=87B504E643390F763DEA3FBB5D3F952A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionKuroMainLightDirection_0"
+      MaterialExpressionEditorX=-3616
+      MaterialExpressionEditorY=-112
+      MaterialExpressionGuid=537D6C63484F15D58C3B46B974B03513
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionLinearInterpolate_0"
+      A=(Expression=MaterialExpressionReroute'"MF_MobileLensFlare_Offset:MaterialExpressionReroute_0"')
+      B=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_1"')
+      Alpha=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_2"')
+      MaterialExpressionEditorX=-1568
+      MaterialExpressionEditorY=-496
+      MaterialExpressionGuid=5E791CC749CB7FC99AEDEFA56DA1FC41
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionLinearInterpolate_1"
+      A=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_0"')
+      B=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_5"')
+      Alpha=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_1"')
+      MaterialExpressionEditorX=-2240
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=5F1FF5A44D6B5DC1761291A34A9F9FE0
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionLinearInterpolate_2"
+      A=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_2"')
+      B=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_3"')
+      Alpha=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_2"')
+      MaterialExpressionEditorX=-1568
+      MaterialExpressionEditorY=-352
+      MaterialExpressionGuid=5E791CC749CB7FC99AEDEFA56DA1FC41
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_0"
+      A=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_0"')
+      B=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_1"')
+      MaterialExpressionEditorX=-576
+      MaterialExpressionEditorY=288
+      MaterialExpressionGuid=5CA658DA4DC473FEA5CF5198EE078953
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_1"
+      A=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_0"')
+      B=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_2"')
+      ConstB=0.100000
+      MaterialExpressionEditorX=-1600
+      MaterialExpressionEditorY=416
+      MaterialExpressionGuid=E341DEC8494AA7EFFC12DE9F75427023
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_10"
+      A=(Expression=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_2"')
+      B=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_3"')
+      MaterialExpressionEditorX=-914
+      MaterialExpressionEditorY=689
+      MaterialExpressionGuid=3D12B6C6427993D9FDCC838FAC803DFE
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_2"
+      A=(Expression=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_0"')
+      B=(Expression=MaterialExpressionDivide'"MF_MobileLensFlare_Offset:MaterialExpressionDivide_1"')
+      MaterialExpressionEditorX=-1504
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=815E6D9E42759F6D253847981916E788
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_3"
+      A=(Expression=MaterialExpressionSine'"MF_MobileLensFlare_Offset:MaterialExpressionSine_0"')
+      ConstB=-1.000000
+      MaterialExpressionEditorX=-2166
+      MaterialExpressionEditorY=-625
+      MaterialExpressionGuid=80FCE26442E9FE1335E99CA027C4C9B6
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_4"
+      A=(Expression=MaterialExpressionStaticSwitchParameter'"MF_MobileLensFlare_Offset:MaterialExpressionStaticSwitchParameter_0"')
+      B=(Expression=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_0"')
+      MaterialExpressionEditorX=-1392
+      MaterialExpressionEditorY=-528
+      MaterialExpressionGuid=1685FBB348B8F69A17EE9BA38D4A16EB
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_5"
+      A=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_4"')
+      B=(Expression=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_2"')
+      MaterialExpressionEditorX=-1392
+      MaterialExpressionEditorY=-416
+      MaterialExpressionGuid=1685FBB348B8F69A17EE9BA38D4A16EB
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_6"
+      A=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_6"')
+      ConstB=-1.000000
+      MaterialExpressionEditorX=-2000
+      MaterialExpressionEditorY=-112
+      MaterialExpressionGuid=E66357D34F7225297F5C3887079A01BC
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_7"
+      A=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_4"')
+      ConstB=-1.000000
+      MaterialExpressionEditorX=-3120
+      MaterialExpressionEditorY=224
+      MaterialExpressionGuid=767C9CA4468CF3AF2E39B68BFECC3B70
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_8"
+      A=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_3"')
+      B=(Expression=MaterialExpressionNamedRerouteUsage'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteUsage_0"')
+      MaterialExpressionEditorX=-2656
+      MaterialExpressionEditorY=-352
+      MaterialExpressionGuid=6B808D9048F089B98584B78423FAEA22
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionMultiply_9"
+      A=(Expression=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_6"')
+      B=(Expression=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_3"')
+      MaterialExpressionEditorX=-3184
+      MaterialExpressionEditorY=-512
+      MaterialExpressionGuid=5F251EC54C864AF1061724B16E00F8ED
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionNamedRerouteDeclaration_0"
+      Input=(Expression=MaterialExpressionDistance'"MF_MobileLensFlare_Offset:MaterialExpressionDistance_0"')
+      Name="ScaleByPos"
+      NodeColor=(R=0.000000,G=0.437500,B=1.000000,A=1.000000)
+      VariableGuid=5D5AE232480CA947D74D828C2213C087
+      MaterialExpressionEditorX=-2416
+      MaterialExpressionEditorY=-48
+      MaterialExpressionGuid=BF596FA149C889C30A629B9ED64B7DAB
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionNamedRerouteUsage_0"
+      Declaration=MaterialExpressionNamedRerouteDeclaration'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteDeclaration_0"'
+      DeclarationGuid=5D5AE232480CA947D74D828C2213C087
+      MaterialExpressionEditorX=-2896
+      MaterialExpressionEditorY=-336
+      MaterialExpressionGuid=CD5D02754E0A89FF3B87488171A68234
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionNamedRerouteUsage_1"
+      Declaration=MaterialExpressionNamedRerouteDeclaration'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteDeclaration_0"'
+      DeclarationGuid=5D5AE232480CA947D74D828C2213C087
+      MaterialExpressionEditorX=-1136
+      MaterialExpressionEditorY=528
+      MaterialExpressionGuid=0C98BE7E464225CE7174E49E112C73FA
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionNormalize_0"
+      VectorInput=(Expression=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_1"')
+      MaterialExpressionEditorX=-2096
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=A1F578704702FDFD6F7ABE9BA44F1E8F
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionNormalize_2"
+      VectorInput=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_2"')
+      MaterialExpressionEditorX=-2448
+      MaterialExpressionEditorY=-160
+      MaterialExpressionGuid=3E6FECE94C34D9B0C1FE10B52253C493
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionReroute_0"
+      Input=(Expression=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_2"')
+      MaterialExpressionEditorX=-2016
+      MaterialExpressionEditorY=-464
+      MaterialExpressionGuid=C9F2F21E493A1F62E9BE77B1945CFD01
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionReroute_2"
+      Input=(Expression=MaterialExpressionCosine'"MF_MobileLensFlare_Offset:MaterialExpressionCosine_0"')
+      MaterialExpressionEditorX=-2080
+      MaterialExpressionEditorY=-736
+      MaterialExpressionGuid=733196DA41B7A4395388F899A41D9BF9
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionSaturate_0"
+      Input=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_10"')
+      MaterialExpressionEditorX=-784
+      MaterialExpressionEditorY=688
+      MaterialExpressionGuid=5F0FA64F40D00838096FD396EDBEEA9F
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_0"
+      ParameterName="Depth"
+      ExpressionGUID=F0E586A34B00722BD6C703A78D51B1C4
+      MaterialExpressionEditorX=-1904
+      MaterialExpressionEditorY=400
+      MaterialExpressionGuid=9B33B6AE48566F534C60D8A4A7C88A92
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_1"
+      SliderMax=1.000000
+      ParameterName="FixedRotation"
+      ExpressionGUID=D8A009754108DECFE194669146603395
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-2594
+      MaterialExpressionEditorY=-869
+      MaterialExpressionGuid=F0C558304FA0845E29A098BC5C8F3714
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_2"
+      SliderMax=1.000000
+      ParameterName="UseFixedRotation"
+      ExpressionGUID=88A792E6428F468088BB6399389C57B2
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-1904
+      MaterialExpressionEditorY=-320
+      MaterialExpressionGuid=F0C558304FA0845E29A098BC5C8F3714
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_3"
+      DefaultValue=10.000000
+      ParameterName="PosScaleOpacityFactor"
+      ExpressionGUID=F5C6A12A4B0A0799394375B97DA4F6EA
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-1152
+      MaterialExpressionEditorY=752
+      MaterialExpressionGuid=29CD7DE0488230E6EEE5019F2CF2057A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_4"
+      ParameterName="PosScaleOpacityBias"
+      ExpressionGUID=BEF7975440817FF0A157C1A9CE0018B9
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-1184
+      MaterialExpressionEditorY=608
+      MaterialExpressionGuid=29CD7DE0488230E6EEE5019F2CF2057A
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionSine_0"
+      Input=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_1"')
+      MaterialExpressionEditorX=-2403
+      MaterialExpressionEditorY=-884
+      MaterialExpressionGuid=157C8970440EC37E401CC7BDEA624910
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionStaticSwitchParameter_0"
+      A=(Expression=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_8"')
+      B=(Expression=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_3"')
+      ParameterName="bScaleElementByPos"
+      ExpressionGUID=49D41FC94726632E8A6428A0F7D615ED
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-2512
+      MaterialExpressionEditorY=-576
+      MaterialExpressionGuid=B45CA6DD48BC1D9C117A3E964D050F94
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionStaticSwitchParameter_1"
+      A=(Expression=MaterialExpressionSaturate'"MF_MobileLensFlare_Offset:MaterialExpressionSaturate_0"')
+      B=(Expression=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_1"')
+      ParameterName="bScaleElementByPos"
+      ExpressionGUID=99AA613E460DC96AA48B3E892BAA04C3
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-624
+      MaterialExpressionEditorY=672
+      MaterialExpressionGuid=B45CA6DD48BC1D9C117A3E964D050F94
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionSubtract_0"
+      A=(Expression=MaterialExpressionTransformPosition'"MF_MobileLensFlare_Offset:MaterialExpressionTransformPosition_0"')
+      B=(Expression=MaterialExpressionWorldPosition'"MF_MobileLensFlare_Offset:MaterialExpressionWorldPosition_0"')
+      MaterialExpressionEditorX=560
+      MaterialExpressionEditorY=48
+      MaterialExpressionGuid=D14B2C2E4DEBE8AC7D8CC4ABB4B31371
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionSubtract_1"
+      A=(Expression=MaterialExpressionTextureCoordinate'"MF_MobileLensFlare_Offset:MaterialExpressionTextureCoordinate_1"')
+      ConstB=0.500000
+      MaterialExpressionEditorX=-3696
+      MaterialExpressionEditorY=-496
+      MaterialExpressionGuid=DB5396FF4C72167ED00F6ABF32131ECF
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionSubtract_2"
+      A=(Expression=MaterialExpressionNamedRerouteUsage'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteUsage_1"')
+      B=(Expression=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_4"')
+      MaterialExpressionEditorX=-964
+      MaterialExpressionEditorY=567
+      MaterialExpressionGuid=FBCC9110469668ADBF614C98118B39CD
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionTextureCoordinate_1"
+      MaterialExpressionEditorX=-3888
+      MaterialExpressionEditorY=-496
+      MaterialExpressionGuid=B1E3D2BD44E20CC0CE3EA99A075F2BEF
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionTransform_0"
+      Input=(Expression=MaterialExpressionKuroMainLightDirection'"MF_MobileLensFlare_Offset:MaterialExpressionKuroMainLightDirection_0"')
+      TransformSourceType=TRANSFORMSOURCE_World
+      TransformType=TRANSFORM_Camera
+      MaterialExpressionEditorX=-3616
+      MaterialExpressionEditorY=-16
+      MaterialExpressionGuid=73E267F64DF84E17A955E19B0142A6AB
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionTransformPosition_0"
+      Input=(Expression=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_1"')
+      TransformSourceType=TRANSFORMPOSSOURCE_Camera
+      TransformType=TRANSFORMPOSSOURCE_World
+      MaterialExpressionEditorX=208
+      MaterialExpressionEditorY=32
+      MaterialExpressionGuid=A1EEC2424B2E2AA7081E2BBE7F6D227D
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionVectorParameter_0"
+      DefaultValue=(R=0.000000,G=0.000000,B=0.000000,A=1.000000)
+      ParameterName="ScreenCenterBias"
+      ExpressionGUID=E1A24A2A48A667A2F10406BD34122D35
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-3440
+      MaterialExpressionEditorY=192
+      MaterialExpressionGuid=939E78874A5B3B1693F262A2AE68A61E
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionVectorParameter_1"
+      DefaultValue=(R=1.000000,G=1.000000,B=0.000000,A=1.000000)
+      ParameterName="ElementScale"
+      ExpressionGUID=92C2E1FE4D648A2137B4DC944F1D8A40
+      Group="LensFlareShape"
+      MaterialExpressionEditorX=-3495
+      MaterialExpressionEditorY=-737
+      MaterialExpressionGuid=6C4C66C84E325014478AC5A6487F23DF
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="MaterialExpressionWorldPosition_0"
+      MaterialExpressionEditorX=224
+      MaterialExpressionEditorY=176
+      MaterialExpressionGuid=C28F51B347E82B916E58E1A775BAF458
+      Function=MaterialFunction'"MF_MobileLensFlare_Offset"'
+   End Object
+   Begin Object Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   Begin Object Name="Material_0"
+      EmissiveColor=(Expression=MaterialExpressionFunctionOutput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionOutput_1"')
+      ShadingModel=MSM_Unlit
+      ShadingModels=(ShadingModelField=1)
+      Expressions(0)=MaterialExpressionFunctionOutput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionOutput_0"'
+      Expressions(1)=MaterialExpressionTransformPosition'"MF_MobileLensFlare_Offset:MaterialExpressionTransformPosition_0"'
+      Expressions(2)=MaterialExpressionWorldPosition'"MF_MobileLensFlare_Offset:MaterialExpressionWorldPosition_0"'
+      Expressions(3)=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_0"'
+      Expressions(4)=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_0"'
+      Expressions(5)=MaterialExpressionTextureCoordinate'"MF_MobileLensFlare_Offset:MaterialExpressionTextureCoordinate_1"'
+      Expressions(6)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_0"'
+      Expressions(7)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_0"'
+      Expressions(8)=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_0"'
+      Expressions(9)=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_1"'
+      Expressions(10)=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_0"'
+      Expressions(11)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_1"'
+      Expressions(12)=MaterialExpressionKuroMainLightDirection'"MF_MobileLensFlare_Offset:MaterialExpressionKuroMainLightDirection_0"'
+      Expressions(13)=MaterialExpressionDotProduct'"MF_MobileLensFlare_Offset:MaterialExpressionDotProduct_0"'
+      Expressions(14)=MaterialExpressionTransform'"MF_MobileLensFlare_Offset:MaterialExpressionTransform_0"'
+      Expressions(15)=MaterialExpressionConstant3Vector'"MF_MobileLensFlare_Offset:MaterialExpressionConstant3Vector_1"'
+      Expressions(16)=MaterialExpressionDivide'"MF_MobileLensFlare_Offset:MaterialExpressionDivide_1"'
+      Expressions(17)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_2"'
+      Expressions(18)=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_1"'
+      Expressions(19)=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_0"'
+      Expressions(20)=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_1"'
+      Expressions(21)=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_2"'
+      Expressions(22)=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_0"'
+      Expressions(23)=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_3"'
+      Expressions(24)=MaterialExpressionFunctionInput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionInput_4"'
+      Expressions(25)=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_1"'
+      Expressions(26)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_2"'
+      Expressions(27)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_3"'
+      Expressions(28)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_4"'
+      Expressions(29)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_4"'
+      Expressions(30)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_5"'
+      Expressions(31)=MaterialExpressionAdd'"MF_MobileLensFlare_Offset:MaterialExpressionAdd_2"'
+      Expressions(32)=MaterialExpressionNormalize'"MF_MobileLensFlare_Offset:MaterialExpressionNormalize_2"'
+      Expressions(33)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_5"'
+      Expressions(34)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_6"'
+      Expressions(35)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_6"'
+      Expressions(36)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_2"'
+      Expressions(37)=MaterialExpressionReroute'"MF_MobileLensFlare_Offset:MaterialExpressionReroute_0"'
+      Expressions(38)=MaterialExpressionSine'"MF_MobileLensFlare_Offset:MaterialExpressionSine_0"'
+      Expressions(39)=MaterialExpressionCosine'"MF_MobileLensFlare_Offset:MaterialExpressionCosine_0"'
+      Expressions(40)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_1"'
+      Expressions(41)=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_1"'
+      Expressions(42)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_3"'
+      Expressions(43)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_3"'
+      Expressions(44)=MaterialExpressionReroute'"MF_MobileLensFlare_Offset:MaterialExpressionReroute_2"'
+      Expressions(45)=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_2"'
+      Expressions(46)=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_0"'
+      Expressions(47)=MaterialExpressionLinearInterpolate'"MF_MobileLensFlare_Offset:MaterialExpressionLinearInterpolate_2"'
+      Expressions(48)=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_0"'
+      Expressions(49)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_4"'
+      Expressions(50)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_5"'
+      Expressions(51)=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_2"'
+      Expressions(52)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_7"'
+      Expressions(53)=MaterialExpressionStaticSwitchParameter'"MF_MobileLensFlare_Offset:MaterialExpressionStaticSwitchParameter_0"'
+      Expressions(54)=MaterialExpressionComponentMask'"MF_MobileLensFlare_Offset:MaterialExpressionComponentMask_0"'
+      Expressions(55)=MaterialExpressionDistance'"MF_MobileLensFlare_Offset:MaterialExpressionDistance_0"'
+      Expressions(56)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_8"'
+      Expressions(57)=MaterialExpressionVectorParameter'"MF_MobileLensFlare_Offset:MaterialExpressionVectorParameter_1"'
+      Expressions(58)=MaterialExpressionAppendVector'"MF_MobileLensFlare_Offset:MaterialExpressionAppendVector_6"'
+      Expressions(59)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_9"'
+      Expressions(60)=MaterialExpressionNamedRerouteDeclaration'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteDeclaration_0"'
+      Expressions(61)=MaterialExpressionNamedRerouteUsage'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteUsage_0"'
+      Expressions(62)=MaterialExpressionFunctionOutput'"MF_MobileLensFlare_Offset:MaterialExpressionFunctionOutput_1"'
+      Expressions(63)=MaterialExpressionStaticSwitchParameter'"MF_MobileLensFlare_Offset:MaterialExpressionStaticSwitchParameter_1"'
+      Expressions(64)=MaterialExpressionConstant'"MF_MobileLensFlare_Offset:MaterialExpressionConstant_1"'
+      Expressions(65)=MaterialExpressionNamedRerouteUsage'"MF_MobileLensFlare_Offset:MaterialExpressionNamedRerouteUsage_1"'
+      Expressions(66)=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_3"'
+      Expressions(67)=MaterialExpressionMultiply'"MF_MobileLensFlare_Offset:MaterialExpressionMultiply_10"'
+      Expressions(68)=MaterialExpressionSaturate'"MF_MobileLensFlare_Offset:MaterialExpressionSaturate_0"'
+      Expressions(69)=MaterialExpressionScalarParameter'"MF_MobileLensFlare_Offset:MaterialExpressionScalarParameter_4"'
+      Expressions(70)=MaterialExpressionSubtract'"MF_MobileLensFlare_Offset:MaterialExpressionSubtract_2"'
+      bCanMaskedBeAssumedOpaque=True
+      StateId=344369B5416FB7EF433B1F87979CF5EB
+      CachedExpressionData=(Parameters=(RuntimeEntries[0]=(NameHashes=(1301931673762388515,10512566676650529258,12265523690884110006,12413762411559264025,17374891301195471606),ParameterInfos=((Name="PosScaleOpacityBias"),(Name="Depth"),(Name="PosScaleOpacityFactor"),(Name="FixedRotation"),(Name="UseFixedRotation")),ExpressionGuids=(BEF7975440817FF0A157C1A9CE0018B9,F0E586A34B00722BD6C703A78D51B1C4,F5C6A12A4B0A0799394375B97DA4F6EA,D8A009754108DECFE194669146603395,88A792E6428F468088BB6399389C57B2),Overrides=(False,False,False,False,False)),RuntimeEntries[1]=(NameHashes=(2208062362747826309,8920082165426745866),ParameterInfos=((Name="ScreenCenterBias"),(Name="ElementScale")),ExpressionGuids=(E1A24A2A48A667A2F10406BD34122D35,92C2E1FE4D648A2137B4DC944F1D8A40),Overrides=(False,False)),ScalarValues=(0.000000,0.000000,10.000000,0.000000,0.000000),VectorValues=((R=0.000000,G=0.000000,B=0.000000,A=1.000000),(R=1.000000,G=1.000000,B=0.000000,A=1.000000)),EditorOnlyEntries[0]=(NameHashes=(11866478881183558165),ParameterInfos=((Name="bScaleElementByPos")),ExpressionGuids=(49D41FC94726632E8A6428A0F7D615ED),Overrides=(False)),StaticSwitchValues=(False),ScalarMinMaxValues=((X=0.000000,Y=0.000000),(X=0.000000,Y=0.000000),(X=0.000000,Y=0.000000),(X=0.000000,Y=1.000000),(X=0.000000,Y=1.000000)),ScalarCurveValues=(None,None,None,None,None),ScalarCurveAtlasValues=(None,None,None,None,None),ScalarCurveAtlasParameterNames=("","","","",""),VectorChannelNameValues=((),()),VectorUsedAsChannelMaskValues=(False,False)),QualityLevelsUsed=(False,False,False,False),QualityLevelsUsedFeatureLevelMask=(0,0,0,0))
+      ThumbnailInfo=SceneThumbnailInfoWithPrimitive'"MF_MobileLensFlare_Offset:SceneThumbnailInfoWithPrimitive_0"'
+      LightingGuid=FE164D514C299903D1531F8EF1960B2F
+   End Object
+   FunctionExpressions(0)=MaterialExpressionFunctionOutput'"MaterialExpressionFunctionOutput_0"'
+   FunctionExpressions(1)=MaterialExpressionTransformPosition'"MaterialExpressionTransformPosition_0"'
+   FunctionExpressions(2)=MaterialExpressionWorldPosition'"MaterialExpressionWorldPosition_0"'
+   FunctionExpressions(3)=MaterialExpressionSubtract'"MaterialExpressionSubtract_0"'
+   FunctionExpressions(4)=MaterialExpressionAdd'"MaterialExpressionAdd_0"'
+   FunctionExpressions(5)=MaterialExpressionTextureCoordinate'"MaterialExpressionTextureCoordinate_1"'
+   FunctionExpressions(6)=MaterialExpressionMultiply'"MaterialExpressionMultiply_0"'
+   FunctionExpressions(7)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_0"'
+   FunctionExpressions(8)=MaterialExpressionConstant'"MaterialExpressionConstant_0"'
+   FunctionExpressions(9)=MaterialExpressionSubtract'"MaterialExpressionSubtract_1"'
+   FunctionExpressions(10)=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_0"'
+   FunctionExpressions(11)=MaterialExpressionMultiply'"MaterialExpressionMultiply_1"'
+   FunctionExpressions(12)=MaterialExpressionKuroMainLightDirection'"MaterialExpressionKuroMainLightDirection_0"'
+   FunctionExpressions(13)=MaterialExpressionDotProduct'"MaterialExpressionDotProduct_0"'
+   FunctionExpressions(14)=MaterialExpressionTransform'"MaterialExpressionTransform_0"'
+   FunctionExpressions(15)=MaterialExpressionConstant3Vector'"MaterialExpressionConstant3Vector_1"'
+   FunctionExpressions(16)=MaterialExpressionDivide'"MaterialExpressionDivide_1"'
+   FunctionExpressions(17)=MaterialExpressionMultiply'"MaterialExpressionMultiply_2"'
+   FunctionExpressions(18)=MaterialExpressionLinearInterpolate'"MaterialExpressionLinearInterpolate_1"'
+   FunctionExpressions(19)=MaterialExpressionFunctionInput'"MaterialExpressionFunctionInput_0"'
+   FunctionExpressions(20)=MaterialExpressionFunctionInput'"MaterialExpressionFunctionInput_1"'
+   FunctionExpressions(21)=MaterialExpressionFunctionInput'"MaterialExpressionFunctionInput_2"'
+   FunctionExpressions(22)=MaterialExpressionNormalize'"MaterialExpressionNormalize_0"'
+   FunctionExpressions(23)=MaterialExpressionFunctionInput'"MaterialExpressionFunctionInput_3"'
+   FunctionExpressions(24)=MaterialExpressionFunctionInput'"MaterialExpressionFunctionInput_4"'
+   FunctionExpressions(25)=MaterialExpressionAdd'"MaterialExpressionAdd_1"'
+   FunctionExpressions(26)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_2"'
+   FunctionExpressions(27)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_3"'
+   FunctionExpressions(28)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_4"'
+   FunctionExpressions(29)=MaterialExpressionMultiply'"MaterialExpressionMultiply_4"'
+   FunctionExpressions(30)=MaterialExpressionMultiply'"MaterialExpressionMultiply_5"'
+   FunctionExpressions(31)=MaterialExpressionAdd'"MaterialExpressionAdd_2"'
+   FunctionExpressions(32)=MaterialExpressionNormalize'"MaterialExpressionNormalize_2"'
+   FunctionExpressions(33)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_5"'
+   FunctionExpressions(34)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_6"'
+   FunctionExpressions(35)=MaterialExpressionMultiply'"MaterialExpressionMultiply_6"'
+   FunctionExpressions(36)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_2"'
+   FunctionExpressions(37)=MaterialExpressionReroute'"MaterialExpressionReroute_0"'
+   FunctionExpressions(38)=MaterialExpressionSine'"MaterialExpressionSine_0"'
+   FunctionExpressions(39)=MaterialExpressionCosine'"MaterialExpressionCosine_0"'
+   FunctionExpressions(40)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_1"'
+   FunctionExpressions(41)=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_1"'
+   FunctionExpressions(42)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_3"'
+   FunctionExpressions(43)=MaterialExpressionMultiply'"MaterialExpressionMultiply_3"'
+   FunctionExpressions(44)=MaterialExpressionReroute'"MaterialExpressionReroute_2"'
+   FunctionExpressions(45)=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_2"'
+   FunctionExpressions(46)=MaterialExpressionLinearInterpolate'"MaterialExpressionLinearInterpolate_0"'
+   FunctionExpressions(47)=MaterialExpressionLinearInterpolate'"MaterialExpressionLinearInterpolate_2"'
+   FunctionExpressions(48)=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_0"'
+   FunctionExpressions(49)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_4"'
+   FunctionExpressions(50)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_5"'
+   FunctionExpressions(51)=MaterialExpressionConstant'"MaterialExpressionConstant_2"'
+   FunctionExpressions(52)=MaterialExpressionMultiply'"MaterialExpressionMultiply_7"'
+   FunctionExpressions(53)=MaterialExpressionStaticSwitchParameter'"MaterialExpressionStaticSwitchParameter_0"'
+   FunctionExpressions(54)=MaterialExpressionComponentMask'"MaterialExpressionComponentMask_0"'
+   FunctionExpressions(55)=MaterialExpressionDistance'"MaterialExpressionDistance_0"'
+   FunctionExpressions(56)=MaterialExpressionMultiply'"MaterialExpressionMultiply_8"'
+   FunctionExpressions(57)=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_1"'
+   FunctionExpressions(58)=MaterialExpressionAppendVector'"MaterialExpressionAppendVector_6"'
+   FunctionExpressions(59)=MaterialExpressionMultiply'"MaterialExpressionMultiply_9"'
+   FunctionExpressions(60)=MaterialExpressionNamedRerouteDeclaration'"MaterialExpressionNamedRerouteDeclaration_0"'
+   FunctionExpressions(61)=MaterialExpressionNamedRerouteUsage'"MaterialExpressionNamedRerouteUsage_0"'
+   FunctionExpressions(62)=MaterialExpressionFunctionOutput'"MaterialExpressionFunctionOutput_1"'
+   FunctionExpressions(63)=MaterialExpressionStaticSwitchParameter'"MaterialExpressionStaticSwitchParameter_1"'
+   FunctionExpressions(64)=MaterialExpressionConstant'"MaterialExpressionConstant_1"'
+   FunctionExpressions(65)=MaterialExpressionNamedRerouteUsage'"MaterialExpressionNamedRerouteUsage_1"'
+   FunctionExpressions(66)=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_3"'
+   FunctionExpressions(67)=MaterialExpressionMultiply'"MaterialExpressionMultiply_10"'
+   FunctionExpressions(68)=MaterialExpressionSaturate'"MaterialExpressionSaturate_0"'
+   FunctionExpressions(69)=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_4"'
+   FunctionExpressions(70)=MaterialExpressionSubtract'"MaterialExpressionSubtract_2"'
+   StateId=E52BB0994488B4461AFC2EA8A9394592
+   CombinedInputTypes=15
+   CombinedOutputTypes=15
+   ThumbnailInfo=SceneThumbnailInfoWithPrimitive'"SceneThumbnailInfoWithPrimitive_0"'
+End Object

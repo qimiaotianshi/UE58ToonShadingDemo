@@ -1,0 +1,32 @@
+Begin Object Class=/Script/Engine.MaterialInstanceConstant Name="MI_Ird_Lig_02J_01"
+   Begin Object Class=/Script/UnrealEd.SceneThumbnailInfoWithPrimitive Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   Begin Object Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   ParameterStateId=702497014AB49919A1F435A2E5C3955D
+   PhysMaterial=PhysicalMaterial'"/Game/Aki/Audio/AudioMaterials/AudioMat_Concrete.AudioMat_Concrete"'
+   Parent=Material'"/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Glare.M_MobileLensFlare_Glare"'
+   bHasStaticPermutationResource=True
+   ScalarParameterValues(0)=(ParameterInfo=(Name="GlareInner"),ExpressionGUID=F962920448E16264F5C360A1E42ED44B)
+   ScalarParameterValues(1)=(ParameterInfo=(Name="GlareOuter"),ParameterValue=1.000000,ExpressionGUID=F00FD3DD4120DFB458056684AF8E9158)
+   ScalarParameterValues(2)=(ParameterInfo=(Name="GlareSharpness"),ParameterValue=1.600000,ExpressionGUID=25BE809045D5A9580232D9A4557F20AC)
+   ScalarParameterValues(3)=(ParameterInfo=(Name="Opacity"),ParameterValue=2.000000,ExpressionGUID=8C94EA19408FD01664155E8D86884404)
+   ScalarParameterValues(4)=(ParameterInfo=(Name="Rotation"),ExpressionGUID=805277E94866CAF8224ACFA21140E1E8)
+   ScalarParameterValues(5)=(ParameterInfo=(Name="Color1"),ParameterValue=0.100000,ExpressionGUID=17929BF04983F643160EBC99A15C0B99)
+   ScalarParameterValues(6)=(ParameterInfo=(Name="Color2"),ParameterValue=0.150000,ExpressionGUID=0110182847101363D97AAEAE5F431819)
+   ScalarParameterValues(7)=(ParameterInfo=(Name="Depth"),ParameterValue=15.000000,ExpressionGUID=F1D784F9465E1DBE1FCF0F8DC4C37993)
+   ScalarParameterValues(8)=(ParameterInfo=(Name="SkyDepth"),ParameterValue=500000.000000,ExpressionGUID=B0819B13490CDD68384FBB82A15B6D56)
+   ScalarParameterValues(9)=(ParameterInfo=(Name="ViewAttPow"),ParameterValue=2.000000,ExpressionGUID=CCA79E09467A8C2C143823929136908E)
+   ScalarParameterValues(10)=(ParameterInfo=(Name="RefractionDepthBias"))
+   VectorParameterValues(0)=(ParameterInfo=(Name="Color"),ParameterValue=(R=0.783538,G=0.737910,B=0.545724,A=1.000000),ExpressionGUID=BE519B83430EAA0DA8AB1A9177B97DA0)
+   VectorParameterValues(1)=(ParameterInfo=(Name="Scale"),ParameterValue=(R=10.000000,G=10.000000,B=0.000000,A=1.000000),ExpressionGUID=304612FB4B3B79D072DA3290170BEBF1)
+   VectorParameterValues(2)=(ParameterInfo=(Name="ColorTint"),ParameterValue=(R=1.000000,G=0.000000,B=0.000000,A=1.000000),ExpressionGUID=BE7728AA4E01CC9CAEFD759556ED81C6)
+   TextureParameterValues(0)=(ParameterInfo=(Name="Texture"),ParameterValue=Texture2D'"/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02G_D.T_Ird_Lig_02G_D"',ExpressionGUID=892750D94BEA2F1DEB24688D9E68DFD6)
+   BasePropertyOverrides=(bOverride_BlendMode=True,TwoSided=True,bEnableSeparateTranslucency=True,bEnableAdaptiveTessellation=True,BlendMode=BLEND_Additive,ShadingModel=MSM_Unlit,OpacityMaskClipValue=0.333300,RenderQueue=200,bSupportsUBInstancing=True,bUseFullPrecision=True)
+   ReferencedTextureGuids(0)=067FD6664816FF2B445DCCB9831E0303
+   StaticParameters=(StaticSwitchParameters=((Value=True,ParameterInfo=(Name="UseTexture"),bOverride=True,ExpressionGUID=AC2E0C5948A2639A9D7C4590271E19DD)))
+   CachedReferencedTextures(0)=Texture2D'"/Game/Aki/Render/Common/T_DefaultColorWhite_D.T_DefaultColorWhite_D"'
+   CachedReferencedTextures(1)=Texture2D'"/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"'
+   ThumbnailInfo=SceneThumbnailInfoWithPrimitive'"SceneThumbnailInfoWithPrimitive_0"'
+   LightingGuid=157EA93A4B41FBF451531B9EFF0C31AA
+End Object

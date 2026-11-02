@@ -1,0 +1,4 @@
+Begin Object Class=/Script/Engine.MaterialParameterCollection Name="MPC_LensFlare_Seq"
+   StateId=2257C5644C8A0EF7962E6A87781F2507
+   ScalarParameters(0)=(DefaultValue=1.000000,ParameterName="LensScale",Id=00EC100C4AFE0D71291B2DA2E54BD39F)
+End Object

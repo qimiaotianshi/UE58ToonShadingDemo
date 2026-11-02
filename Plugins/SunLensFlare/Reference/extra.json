@@ -1,0 +1,28 @@
+{
+  "lights": [],
+  "components": [
+    {
+      "name": "StaticMesh_LensFlareGhost",
+      "parent": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02M_01.MI_Ird_Lig_02M_01",
+      "textures": {
+        "Texture": null,
+        "Color": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02J_D.T_Ird_Lig_02J_D",
+        "Flare Line Texture": "/Engine/EngineMaterials/DefaultWhiteGrid_Low.DefaultWhiteGrid_Low"
+      }
+    },
+    {
+      "name": "StaticMesh_LensFlareHalo",
+      "parent": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02L_01.MI_Ird_Lig_02L_01",
+      "textures": {
+        "Texture": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02I_D.T_Ird_Lig_02I_D"
+      }
+    },
+    {
+      "name": "StaticMesh_LensFlareGlare",
+      "parent": "/Game/Aki/Scene/Assets/Common/LightFog/Mat/MI_Ird_Lig_02J_01.MI_Ird_Lig_02J_01",
+      "textures": {
+        "Texture": "/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02G_D.T_Ird_Lig_02G_D"
+      }
+    }
+  ]
+}

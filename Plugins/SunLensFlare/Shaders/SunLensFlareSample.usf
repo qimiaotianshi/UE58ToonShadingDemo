@@ -1,0 +1,37 @@
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Private/SceneTexturesCommon.ush"
+Texture2D SceneColorTexture;
+Texture2D SceneDepthTexture;
+Texture2D HistoryTexture;
+SamplerState SampleSampler;
+SamplerState DepthSampler;
+float2 SunUV;
+float2 RectMin;
+float2 RectSize;
+float2 InvBufferSize;
+float RadiusUV;
+float MixAlpha;
+float SkyDepth;
+float SunInView;
+RWTexture2D<float4> OutputTexture;
+
+[numthreads(1,1,1)]
+void MainCS(uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+    float4 Target = 0;
+    if (SunInView > 0.5)
+    {
+        float2 BaseUV = (RectMin + SunUV * RectSize) * InvBufferSize;
+        float2 Offsets[3] = {float2(0.0,1.0),float2(0.5,-0.865),float2(-0.5,-0.865)};
+        float DeviceZ = 1.0;
+        [unroll] for (int Index = 0; Index < 3; ++Index)
+        {
+            float2 SampleUV = clamp(BaseUV + Offsets[Index]*RadiusUV, (RectMin+0.5)*InvBufferSize, (RectMin+RectSize-0.5)*InvBufferSize);
+            DeviceZ = min(DeviceZ,SceneDepthTexture.SampleLevel(DepthSampler, SampleUV, 0).r);
+            Target.rgb = max(Target.rgb,SceneColorTexture.SampleLevel(SampleSampler, SampleUV, 0).rgb / max(View.PreExposure, 0.000001));
+        }
+        Target.a = (DeviceZ <= 0.0 || (SkyDepth > 0.0 && ConvertFromDeviceZ(DeviceZ) >= SkyDepth)) ? 1.0 : 0.0;
+    }
+    float4 Last = HistoryTexture.SampleLevel(SampleSampler, float2(0.5,0.5), 0);
+    OutputTexture[uint2(0,0)] = lerp(Last, Target, MixAlpha);
+}

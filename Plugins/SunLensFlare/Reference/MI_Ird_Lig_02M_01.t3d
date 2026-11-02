@@ -1,0 +1,29 @@
+Begin Object Class=/Script/Engine.MaterialInstanceConstant Name="MI_Ird_Lig_02M_01"
+   Begin Object Class=/Script/UnrealEd.SceneThumbnailInfoWithPrimitive Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   Begin Object Name="SceneThumbnailInfoWithPrimitive_0"
+   End Object
+   ParameterStateId=F8DA22324AE078D66E99149297AF8FA6
+   PhysMaterial=PhysicalMaterial'"/Game/Aki/Audio/AudioMaterials/AudioMat_Concrete.AudioMat_Concrete"'
+   Parent=Material'"/Game/Aki/Render/Shaders/Effect/MobileLensFlare/M_MobileLensFlare_Ghost.M_MobileLensFlare_Ghost"'
+   bHasStaticPermutationResource=True
+   ScalarParameterValues(0)=(ParameterInfo=(Name="OffsetBias"),ParameterValue=0.450000,ExpressionGUID=CA1C0D6E40C4BE11066F8F91CF32D684)
+   ScalarParameterValues(1)=(ParameterInfo=(Name="OffsetScale"),ParameterValue=2.000000,ExpressionGUID=138BF25242085DFA5E7D13828DD94E1E)
+   ScalarParameterValues(2)=(ParameterInfo=(Name="Opacity"),ParameterValue=2.000000,ExpressionGUID=8C94EA19408FD01664155E8D86884404)
+   ScalarParameterValues(3)=(ParameterInfo=(Name="Scale"),ParameterValue=0.200000,ExpressionGUID=249EECF34DA47016547C50A1BCC13DAB)
+   ScalarParameterValues(4)=(ParameterInfo=(Name="Depth"),ParameterValue=15.000000,ExpressionGUID=F0E586A34B00722BD6C703A78D51B1C4)
+   ScalarParameterValues(5)=(ParameterInfo=(Name="RampSample"),ParameterValue=0.200000,ExpressionGUID=64C074D0408735E190851EA275624F81)
+   ScalarParameterValues(6)=(ParameterInfo=(Name="ReversedViewAttPow"),ParameterValue=0.200000,ExpressionGUID=64B34D4C44C1471796F6F4B27ED71AAF)
+   ScalarParameterValues(7)=(ParameterInfo=(Name="ViewAttPow"),ParameterValue=2.000000,ExpressionGUID=1FC782D8429F2034E5DC43AB38551E28)
+   ScalarParameterValues(8)=(ParameterInfo=(Name="RefractionDepthBias"))
+   TextureParameterValues(0)=(ParameterInfo=(Name="Color"),ParameterValue=Texture2D'"/Game/Aki/Scene/Assets/Common/LightFog/Tex/T_Ird_Lig_02J_D.T_Ird_Lig_02J_D"',ExpressionGUID=FA72E4D2430971855B44708F634AB22D)
+   BasePropertyOverrides=(bOverride_BlendMode=True,bOverride_TwoSided=True,TwoSided=True,bEnableSeparateTranslucency=True,bEnableAdaptiveTessellation=True,BlendMode=BLEND_Additive,ShadingModel=MSM_Unlit,OpacityMaskClipValue=0.333300,RenderQueue=200,bSupportsUBInstancing=True,bUseFullPrecision=True)
+   ReferencedTextureGuids(0)=1F42972B47124479957941A25D2F722C
+   StaticParameters=(StaticSwitchParameters=((Value=True,ParameterInfo=(Name="UseUV1SampleColor"),bOverride=True,ExpressionGUID=21360DCC4735B82C557BEA85ACF2ACAD)))
+   CachedReferencedTextures(0)=Texture2D'"/Engine/Functions/Engine_MaterialFunctions02/ExampleContent/Gradient.Gradient"'
+   CachedReferencedTextures(1)=None
+   CachedReferencedTextures(2)=Texture2D'"/Engine/EngineMaterials/Good64x64TilingNoiseHighFreq.Good64x64TilingNoiseHighFreq"'
+   CachedReferencedTextures(3)=Texture2D'"/Engine/EngineMaterials/DefaultWhiteGrid_Low.DefaultWhiteGrid_Low"'
+   ThumbnailInfo=SceneThumbnailInfoWithPrimitive'"SceneThumbnailInfoWithPrimitive_0"'
+   LightingGuid=0A55DA724FB539E09603FB9198B2B0A5
+End Object

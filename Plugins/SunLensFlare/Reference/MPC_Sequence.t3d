@@ -1,0 +1,5 @@
+Begin Object Class=/Script/Engine.MaterialParameterCollection Name="MPC_Sequence"
+   StateId=4FC7BDBA46C67E7E97A9B18AF7086B83
+   ScalarParameters(0)=(DefaultValue=1.000000,ParameterName="HaloPointOpacity",Id=2C96DA154E047D242F3A0E8AB370257A)
+   ScalarParameters(1)=(DefaultValue=1.000000,ParameterName="LensflareMulti",Id=96283CE349D0A09A1D2CDDB8C69FE055)
+End Object
