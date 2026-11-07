@@ -81,6 +81,7 @@ void AWardrobeExplorer::ApplySettings(){
 }
 void AWardrobeExplorer::Tick(float Dt){
  Super::Tick(Dt);if(auto* GI=GetGameInstance())if(auto* L=GI->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading()){bWantsSprint=false;GetCharacterMovement()->StopMovementImmediately();}
+ if(!CanPlayMovementAudio())StopMovementAudio();
  ApplySettings();
  if(Settings)CameraBoom->TargetArmLength=FMath::FInterpTo(CameraBoom->TargetArmLength,Settings->CameraDistance+CameraZoomOffset,Dt,12.f);
 }
@@ -268,6 +269,7 @@ void AWardrobeExplorerController::TogglePauseMenu(){
   ClosePauseMenu();PlayUISound(EWardrobeUISound::Resume);return;
  }
  PlayUISound(EWardrobeUISound::Pause);
+ if(auto* Explorer=Cast<AWardrobeExplorer>(GetPawn()))Explorer->StopMovementAudio();
  bPauseMenu=true;SetPause(true);SetIgnoreMoveInput(true);SetIgnoreLookInput(true);bShowMouseCursor=true;
  if(auto* A=Cast<AWardrobeExplorer>(GetPawn()))A->StopSprint();
  PauseWidget=SNew(SWardrobeExplorerPause).Controller(this);

@@ -7,6 +7,8 @@
 #include "Animation/AnimInstance.h"
 #include "WardrobeLocomotion.generated.h"
 enum class EWardrobeUISound : uint8;
+enum class EWardrobeMovementSound : uint8;
+class UWardrobeMovementAudioData;class UAudioComponent;class USoundBase;
 class UInputAction;class UInputMappingContext;class USpringArmComponent;class UCameraComponent;class UBlendSpace;class UAnimSequence;class UAnimMontage;
 struct FInputActionValue;
 UENUM(BlueprintType)
@@ -15,6 +17,7 @@ UCLASS(BlueprintType)
 class DREAMBLOOM_API UWardrobeLocomotionData : public UDataAsset {
  GENERATED_BODY()
 public:
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Movement Audio") TObjectPtr<UWardrobeMovementAudioData> MovementAudio;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Movement",meta=(ClampMin="1",Units="cm/s")) float WalkSpeed=160;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Movement",meta=(ClampMin="1",Units="cm/s")) float RunSpeed=420;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Movement",meta=(ClampMin="1")) float Acceleration=900;
@@ -71,6 +74,9 @@ public:
  UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="Camera") TObjectPtr<UCameraComponent> FollowCamera;
  virtual void BeginPlay() override;
  virtual void Tick(float Dt) override;
+ virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+ virtual void OnJumped_Implementation() override;
+ virtual void Landed(const FHitResult& Hit) override;
  virtual void SetupPlayerInputComponent(UInputComponent* Input) override;
  virtual UInputComponent* CreatePlayerInputComponent() override;
  void Move(const FInputActionValue& Value);
@@ -79,6 +85,14 @@ public:
  void StartSprint();void StopSprint();void TogglePause();
  void StartJump();void EndJump();
  void ApplySettings();
+ UFUNCTION(BlueprintCallable,Category="Movement Audio") void PlayFootstep(bool LeftFoot=true);
+ bool CanPlayMovementAudio() const;
+ bool PlayMovementSound(EWardrobeMovementSound Event);
+ void StopMovementAudio();
+ UPROPERTY(Transient,BlueprintReadOnly,Category="Movement Audio") int32 MovementSoundPlayCount=0;
+ UPROPERTY(Transient) TArray<TObjectPtr<UAudioComponent>> MovementSounds;
+ UPROPERTY(Transient) TArray<TObjectPtr<USoundBase>> LastMovementSounds;
+ double LastFootstepTime[2]={-1000,-1000},LastAnyFootstepTime=-1000,FootstepsBlockedUntil=0;
  bool bWantsSprint=false;
  float CameraZoomOffset=0;
  bool bCameraDistanceInitialized=false;
