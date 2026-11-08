@@ -61,3 +61,8 @@ git push
 - `Content/`、`Plugins/` 下的资产与二进制均通过 LFS 存储，请勿删除 `.gitattributes`
 - `Binaries/`、`Intermediate/`、`Saved/` 为本地生成内容，已在 `.gitignore` 中排除，无需提交
 - 超大资产单文件可能超过 100 MB，必须经 LFS 上传，直接 push 会被 GitHub 拒绝
+
+## AI内容，AI生成声音需要额外单独下载
+然后把文件解压到：Content\AI\GPT-SoVITS-v5-20261006nvidia50x0
+通过网盘分享的文件：GPT-SoVITS-v5-20261006nvidia50x0.zip等7个文件
+链接: https://pan.baidu.com/s/1uDOp0jRrT3y8AdZVUbSSxA?pwd=8h8c 提取码: 8h8c
