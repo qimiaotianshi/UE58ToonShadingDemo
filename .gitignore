@@ -34,3 +34,18 @@ Plugins/*/Intermediate/
 
 # 自动保存的资产
 Saved/Autosaves/
+
+# ===== 本地 AI 运行库（体积过大，禁止入仓）=====
+# SoVITS / PyTorch / ffmpeg 等第三方运行环境，含大量 >100MB 的模型与可执行文件
+# GitHub 单文件上限 100MB，此类内容请通过网盘或 Release 单独分发
+Content/AI/
+**/runtime/Lib/site-packages/
+**/pretrained_models/
+**/GPT_SoVITS/
+**/*.pth
+**/*.pt
+**/*.ckpt
+**/*.pickle
+**/*.pyc
+__pycache__/
+**/TEMP/gradio/

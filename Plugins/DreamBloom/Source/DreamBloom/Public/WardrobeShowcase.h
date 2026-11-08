@@ -16,6 +16,7 @@ class UWardrobeAudioData;
 class UWardrobeStoryFlow;
 class UWardrobeCharacterData;
 class UWardrobeClickEffectData;
+class UWardrobeAISpeechComponent;
 enum class EWardrobeUISound : uint8;
 
 USTRUCT(BlueprintType)
@@ -40,6 +41,14 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Interaction",meta=(ClampMin="1",ClampMax="50")) float ClickDragThreshold=6.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="UI Audio") TObjectPtr<UWardrobeAudioData> AudioData;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Click Effect") TObjectPtr<UWardrobeClickEffectData> ClickEffect;
+ /** One opening movie before the login/showcase UI, once per game session. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie") bool bPlayStartupMovie=true;
+ /** Keep the MP4 under Content/Movies. The picker stores a project-relative path for migration and packaging. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie",meta=(EditCondition="bPlayStartupMovie",FilePathFilter="mp4",RelativeToGameDir)) FFilePath StartupMovie{TEXT("Content/Movies/WardrobeStartup.mp4")};
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie",meta=(EditCondition="bPlayStartupMovie",ClampMin="0.5",ClampMax="4.0")) float StartupAspectRatio=16.f/9.f;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie",meta=(EditCondition="bPlayStartupMovie",ClampMin="0",Units="s")) float StartupFadeTime=1.5f;
+ /** Safety limit for unavailable AI/streaming. Video still finishes before the click prompt appears. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie",meta=(EditCondition="bPlayStartupMovie",ClampMin="5",Units="s")) float StartupPrepareTimeout=60.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen") TSoftObjectPtr<UTexture2D> LoadingBackground;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Loading Screen") FText LoadingHint=FText::FromString(TEXT("新的风景，即将展开。"));
  /** Hold the cover this long before the blocking travel, so streaming and the render thread go quiet first. */
@@ -60,6 +69,7 @@ class DREAMBLOOM_API AWardrobeShowcase : public AActor {
 public:
  AWardrobeShowcase();
  UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="Character") TObjectPtr<USkeletalMeshComponent> Character;
+ UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="AI Speech") TObjectPtr<UWardrobeAISpeechComponent> AISpeech;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Menu") TObjectPtr<UWardrobeMenuData> MenuData;
  /** Set automatically from the DA entry whose CharacterTag resolves to this actor. */
  UPROPERTY(Transient,BlueprintReadOnly,Category="Interaction") TObjectPtr<UWardrobeCharacterData> InteractionData;

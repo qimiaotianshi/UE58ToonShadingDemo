@@ -1,9 +1,11 @@
 #include "WardrobeShowcase.h"
+#include "WardrobeAISpeech.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 
 AWardrobeShowcase::AWardrobeShowcase(){
  PrimaryActorTick.bCanEverTick=true;
+ AISpeech=CreateDefaultSubobject<UWardrobeAISpeechComponent>(TEXT("AISpeech"));
  Character=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Daniya"));SetRootComponent(Character);
  Character->SetCollisionEnabled(ECollisionEnabled::NoCollision);
  Character->VisibilityBasedAnimTickOption=EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;

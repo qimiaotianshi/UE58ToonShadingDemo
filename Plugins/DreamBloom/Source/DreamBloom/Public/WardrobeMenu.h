@@ -11,6 +11,7 @@ class AWardrobeShowcase;
 class UWardrobeStationController;
 class SWardrobeMenu;
 class UTexture2D;
+class UWardrobeAISpeechComponent;
 
 UCLASS()
 class DREAMBLOOM_API UWardrobeSession : public UGameInstanceSubsystem {
@@ -37,6 +38,13 @@ public:
  UFUNCTION(BlueprintCallable,Category="Menu") void OpenChoice(int32 Index);
  UFUNCTION(BlueprintCallable,Category="Menu") void SelectChoice(int32 Index);
  UFUNCTION(BlueprintCallable,Category="Menu") void StartGame();
+ UPROPERTY(Transient,BlueprintReadOnly,Category="Dialogue") bool DialogueOpen=false;
+ UFUNCTION(BlueprintCallable,Category="Dialogue") void OpenDialogue();
+ UFUNCTION(BlueprintCallable,Category="Dialogue") void CloseDialogue();
+ UFUNCTION(BlueprintCallable,Category="Dialogue") bool SendDialogue(const FString& Text);
+ UFUNCTION(BlueprintPure,Category="Dialogue") bool CanSendDialogue() const;
+ FString DialogueStatus() const;
+ FString DialogueReplyText() const{return DialogueReply;}
  UFUNCTION(BlueprintCallable,Category="Story") void ContinueGame();
  UFUNCTION(BlueprintCallable,Category="Menu") void ReturnToLogin();
  void OpenStorySlots(bool NewGame);
@@ -85,6 +93,11 @@ protected:
 private:
  friend class FWardrobeStoryMenuTest;
  friend class FWardrobeDestinationMenuTest;
+ friend class FWardrobeDialogueMenuTest;
+ UWardrobeAISpeechComponent* ActiveSpeech() const;
+ void EndDialogue(bool PlaySound,bool RestoreFocus);
+ TWeakObjectPtr<UWardrobeAISpeechComponent> DialogueSpeech;
+ FString DialogueReply;
  FString PendingNewGameName=TEXT("旅人");
  TSharedPtr<SWardrobeMenu> SlateMenu;
  UPROPERTY(Transient) TObjectPtr<class ULevelSequencePlayer> ClickEffectPlayer;

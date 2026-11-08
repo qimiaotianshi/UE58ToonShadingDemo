@@ -33,6 +33,7 @@ public:
  void SetAdditionalLoadingRequired(bool bRequired) { bAdditionalLoading = bRequired; }
 
 private:
+ friend class UWardrobeStartupSubsystem;
  friend class FWardrobeDestinationMenuTest;
  friend class FWardrobeLoadingMovementTest;
  bool Tick(float DeltaSeconds);

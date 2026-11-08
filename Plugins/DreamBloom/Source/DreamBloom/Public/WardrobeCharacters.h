@@ -11,11 +11,13 @@
 
 class UCurveFloat;
 class ULevelSequence;
+class UWardrobeAISpeechData;
 
 USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobeCharacterOption {
  GENERATED_BODY()
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Character") FText Label;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Speech") TObjectPtr<UWardrobeAISpeechData> AISpeech;
  /** Loops while this character is available in the preview. Interactions interrupt it and restart it from the beginning. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Default Sequence") TSoftObjectPtr<ULevelSequence> DefaultSequence;
  /** Shared duration for fading physics out before a sequence switch and back in afterwards. Zero switches immediately. */

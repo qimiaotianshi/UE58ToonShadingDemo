@@ -1,0 +1,9 @@
+达妮娅参考音频：output.wav_0009342720_0009558400.wav
+来源：https://modelscope.cn/models/villia/dania
+作者提供的 README：https://modelscope.cn/api/v1/models/villia/dania/repo?Revision=master&FilePath=README.md
+下载音频 SHA256：98cde6a626505e531d0297b5e9ad99f0aec274077ef6bc9540c83dad89c945c8
+模型卡标注 Apache License 2.0。角色与原始语音权利属于各自权利人。
+参考台词：怎么啊？如果有你在也不放心，那就干脆给我也装个限制器或者炸弹喽。
+
+MetaHuman 口型模型与 StreamingADA、NNERuntimeORT、MetaHumanCoreTech 来自当前 Unreal Engine。
+本更新包不包含引擎模型或 GPT-SoVITS 模型权重、Python runtime。

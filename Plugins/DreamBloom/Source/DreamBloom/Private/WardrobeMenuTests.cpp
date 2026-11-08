@@ -1,6 +1,7 @@
 #include "WardrobeMenu.h"
 #if WITH_DEV_AUTOMATION_TESTS
 #include "WardrobeStory.h"
+#include "WardrobeAISpeech.h"
 #include "WardrobeShowcase.h"
 #include "WardrobeStations.h"
 #include "WardrobeLoading.h"
@@ -26,6 +27,14 @@
 #include "Widgets/SWidget.h"
 #include "Widgets/SOverlay.h"
 
+static UWardrobeStoryFlow* MenuStoryFixture(){
+ auto* Flow=NewObject<UWardrobeStoryFlow>();Flow->Steps.SetNum(2);
+ for(int32 I=0;I<2;++I){auto& Step=Flow->Steps[I];Step.StoryId=FName(*FString::Printf(TEXT("TestStory%d"),I));Step.TriggerId=FName(*FString::Printf(TEXT("TestTrigger%d"),I));
+  Step.Level=FSoftObjectPath(I==0?TEXT("/Game/Wardrobe/Maps/L_WardrobeMain.L_WardrobeMain"):TEXT("/Game/Wardrobe/Maps/L_Wardrobe.L_Wardrobe"));
+  Step.Sequence=FSoftObjectPath(TEXT("/Game/Wardrobe/Story/LS_StoryDemo01.LS_StoryDemo01"));
+ }return Flow;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeStoryMenuTest,"DreamBloom.Story.MenuOverlayKeepsDefaultSequence",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FWardrobeStoryMenuTest::RunTest(const FString&){
  auto* GI=NewObject<UGameInstance>(GEngine);GI->InitializeStandalone();auto* W=GI->GetWorld();
@@ -34,7 +43,7 @@ bool FWardrobeStoryMenuTest::RunTest(const FString&){
  auto* Person=W->SpawnActor<AWardrobeShowcase>();auto* Camera=W->SpawnActor<ACameraActor>();
  Person->Tags.Add(TEXT("MenuTestPerson"));Camera->Tags.Add(TEXT("MenuTestCamera"));
  Person->Character->SetSkeletalMesh(LoadObject<USkeletalMesh>(nullptr,TEXT("/Engine/EngineMeshes/SkeletalCube.SkeletalCube")));
- auto* Flow=LoadObject<UWardrobeStoryFlow>(nullptr,TEXT("/Game/BluePrint/Story/DA_StoryFlow.DA_StoryFlow"));
+ auto* Flow=MenuStoryFixture();
  if(!TestNotNull(TEXT("Valid story fixture"),Flow))return false;
  auto* Data=NewObject<UWardrobeMenuData>();Data->StoryFlow=DuplicateObject(Flow,GetTransientPackage());
  Data->StoryFlow->SaveNamespace=TEXT("MenuTest_")+FGuid::NewGuid().ToString(EGuidFormats::Digits);
@@ -49,7 +58,7 @@ bool FWardrobeStoryMenuTest::RunTest(const FString&){
  Channels[0]->AddLinearKey(0,100.);Channels[0]->AddLinearKey(24000,110.);Option.DefaultSequence=Sequence;
  auto* Menu=CreateWidget<UWardrobeMenu>(PC,UWardrobeMenu::StaticClass());Menu->Data=Data;Menu->TakeWidget();
  Data->AudioData=NewObject<UWardrobeAudioData>();
- auto* TestSound=LoadObject<USoundBase>(nullptr,TEXT("/Game/WardrobePinch21/Audio/Grab.Grab"));
+ auto* TestSound=LoadObject<USoundBase>(nullptr,TEXT("/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess"));
  Data->AudioData->LoadGame.Sound=Data->AudioData->NewGame.Sound=Data->AudioData->Back.Sound=TestSound;
  auto* Audio=GI->GetSubsystem<UWardrobeAudioSubsystem>();Audio->Configure(Data->AudioData);
  Menu->StationController=NewObject<UWardrobeStationController>(Menu);
@@ -75,7 +84,25 @@ bool FWardrobeStoryMenuTest::RunTest(const FString&){
   TestTrue(TEXT("Closing overlay restores preview gestures"),Menu->CanPreviewInput());
   TestTrue(TEXT("Closing overlay also preserves player and pose"),Player==Person->GetDefaultSequencePlayer()&&FMath::IsNearlyEqual(Person->GetActorLocation().X,106.,.01));
  }
+ Option.AISpeech=NewObject<UWardrobeAISpeechData>();
+ auto* Speech=Person->AISpeech.Get();
+ Player->SetPlaybackPosition(FMovieSceneSequencePlaybackParams(.6f,EUpdatePositionMethod::Jump));
+ for(int32 I=0;I<2;++I){
+  Menu->OpenDialogue();TestTrue(TEXT("Dialogue panel opens and pauses automatic speech"),Menu->DialogueOpen&&Speech->IsAutomaticPaused());
+  Menu->OpenDialogue();
+  for(int32 Tick=0;Tick<6;++Tick)Menu->NativeTick(FGeometry(),1.f/60.f);
+  TestFalse(TEXT("Typing blocks preview pointer gestures"),Menu->CanPreviewInput());
+  TestTrue(TEXT("Dialogue does not stop or reset default Sequence"),Player==Person->GetDefaultSequencePlayer()&&Person->IsDefaultSequencePlaying()&&FMath::IsNearlyEqual(Player->GetCurrentTime().AsSeconds(),.6,.01));
+  TestTrue(TEXT("Idle character can receive explicit messages while auto is paused"),Menu->CanSendDialogue());
+  TestFalse(TEXT("Whitespace cannot be sent"),Menu->SendDialogue(TEXT(" \t")));
+  Menu->CloseDialogue();
+  TestTrue(TEXT("Closing restores timer and gestures"),!Menu->DialogueOpen&&!Speech->IsAutomaticPaused()&&Menu->CanPreviewInput());
+ }
+ Menu->OpenDialogue();Menu->OpenStorySlots(false);
+ TestTrue(TEXT("Opening save slots cleans up dialogue pause"),!Menu->DialogueOpen&&!Speech->IsAutomaticPaused());Menu->CloseStorySlots();
+ Menu->OpenDialogue();
  Menu->PrepareStoryTravel();TestFalse(TEXT("Real travel still shuts down showcase Sequence"),Person->IsDefaultSequencePlaying());
+ TestFalse(TEXT("Map travel leaves no paused speech component"),Menu->DialogueOpen||Speech->IsAutomaticPaused());
  Menu->StationController->Shutdown();Menu->ReleaseSlateResources(true);return true;
 }
 
@@ -94,7 +121,7 @@ bool FWardrobeDestinationMenuTest::RunTest(const FString&){
  auto* Local=NewObject<ULocalPlayer>(GEngine);GI->AddLocalPlayer(Local,FPlatformUserId::CreateFromInternalId(0));auto* PC=W->SpawnActor<APlayerController>();PC->SetPlayer(Local);
  auto Overlay=SNew(SOverlay);auto* Viewport=NewObject<UGameViewportClient>(GEngine);Viewport->SetViewportOverlayWidget(nullptr,Overlay);
  GEngine->GetWorldContextFromWorldChecked(W).GameViewport=Viewport;
- auto* Source=LoadObject<UWardrobeStoryFlow>(nullptr,TEXT("/Game/BluePrint/Story/DA_StoryFlow.DA_StoryFlow"));
+ auto* Source=MenuStoryFixture();
  auto* Data=NewObject<UWardrobeMenuData>();Data->StoryFlow=DuplicateObject(Source,GI);Data->StoryFlow->SaveNamespace=TEXT("DestinationTest_")+FGuid::NewGuid().ToString(EGuidFormats::Digits);
  ON_SCOPE_EXIT{Loading->Finish(true);Story->Save=nullptr;for(int32 I=0;I<3;++I)UGameplayStatics::DeleteGameInSlot(Story->SlotName(I),0);GI->Shutdown();GEngine->DestroyWorldContext(W);W->DestroyWorld(false);};
  Data->MenuLevel=FSoftObjectPath(TEXT("/Game/Test/")+UGameplayStatics::GetCurrentLevelName(W,true)+TEXT(".")+UGameplayStatics::GetCurrentLevelName(W,true));
@@ -135,7 +162,7 @@ bool FWardrobeStoryAudioTest::RunTest(const FString&){
  auto* Data=NewObject<UWardrobeAudioData>();
  struct FRoute{EWardrobeUISound Event;FWardrobeSoundEntry* Override;FWardrobeSoundEntry* Fallback;};
  FRoute Routes[]={{EWardrobeUISound::NewGame,&Data->NewGame,&Data->Confirm},{EWardrobeUISound::ContinueGame,&Data->ContinueGame,&Data->StartGame},{EWardrobeUISound::LoadGame,&Data->LoadGame,&Data->Confirm},{EWardrobeUISound::SaveSlotSelect,&Data->SaveSlotSelect,&Data->Confirm},{EWardrobeUISound::Pause,&Data->Pause,&Data->Confirm},{EWardrobeUISound::Resume,&Data->Resume,&Data->Cancel}};
- auto* Sound=LoadObject<USoundBase>(nullptr,TEXT("/Game/WardrobePinch21/Audio/Grab.Grab"));if(!TestNotNull(TEXT("Sound fixture"),Sound))return false;
+ auto* Sound=LoadObject<USoundBase>(nullptr,TEXT("/Engine/EditorSounds/Notifications/CompileSuccess.CompileSuccess"));if(!TestNotNull(TEXT("Sound fixture"),Sound))return false;
  Data->Confirm.Sound=Data->Cancel.Sound=Data->StartGame.Sound=Sound;
  for(auto& Route:Routes){
   TestTrue(TEXT("Empty new entry resolves to existing configured sound"),&Data->GetEntry(Route.Event)==Route.Fallback);
