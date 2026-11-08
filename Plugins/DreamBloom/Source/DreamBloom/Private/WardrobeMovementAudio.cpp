@@ -13,7 +13,14 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
-const TArray<TObjectPtr<USoundBase>>& UWardrobeMovementAudioData::GetSounds(EWardrobeMovementSound Event) const {
+const TArray<TObjectPtr<USoundBase>>& UWardrobeMovementAudioData::GetSounds(EWardrobeMovementSound Event,EPhysicalSurface Surface) const {
+ if(Event==EWardrobeMovementSound::Walk||Event==EWardrobeMovementSound::Run){
+  for(const auto& Row:Surfaces)if(Row.Surface==Surface){
+   const auto& Choice=Event==EWardrobeMovementSound::Run&&!Row.Run.IsEmpty()?Row.Run:Row.Walk;
+   if(Choice.ContainsByPredicate([](const TObjectPtr<USoundBase>& S){return IsValid(S.Get());}))return Choice;
+   break;
+  }
+ }
  switch(Event){
  case EWardrobeMovementSound::Walk:return Walk;
  case EWardrobeMovementSound::Run:return Run.IsEmpty()?Walk:Run;
@@ -43,14 +50,16 @@ void AWardrobeExplorer::PlayFootstep(bool Left){
  // Blend-space followers and overlapping transition clips must not double-trigger one contact.
  if(Now<FootstepsBlockedUntil||Now-LastFootstepTime[Foot]<.16||Now-LastAnyFootstepTime<.075)return;
  const bool Running=GetVelocity().Size2D()>FMath::Max(1.f,Settings->WalkSpeed)*1.2f;
- if(PlayMovementSound(Running?EWardrobeMovementSound::Run:EWardrobeMovementSound::Walk)){
+ FVector Contact;const EPhysicalSurface Surface=DetectFootstepSurface(Left,Contact);
+ if(PlayMovementSound(Running?EWardrobeMovementSound::Run:EWardrobeMovementSound::Walk,Surface,&Contact)){
   LastFootstepTime[Foot]=LastAnyFootstepTime=Now;
  }
 }
-bool AWardrobeExplorer::PlayMovementSound(EWardrobeMovementSound Event){
+bool AWardrobeExplorer::PlayMovementSound(EWardrobeMovementSound Event,EPhysicalSurface Surface,const FVector* Location){
  if(!CanPlayMovementAudio())return false;
- const auto& Sounds=Settings->MovementAudio->GetSounds(Event);
- const int32 Group=int32(Event);LastMovementSounds.SetNum(5);
+ const auto& Sounds=Settings->MovementAudio->GetSounds(Event,Surface);
+ const int32 SurfaceIndex=FMath::Clamp(int32(Surface),0,int32(SurfaceType_Max)-1);
+ const int32 Group=SurfaceIndex*5+int32(Event);LastMovementSounds.SetNum(int32(SurfaceType_Max)*5);
  TArray<USoundBase*,TInlineAllocator<8>> Choices;
  for(auto Sound:Sounds)if(IsValid(Sound.Get()))Choices.AddUnique(Sound.Get());
  if(Choices.IsEmpty())return false;
@@ -61,11 +70,13 @@ bool AWardrobeExplorer::PlayMovementSound(EWardrobeMovementSound Event){
  while(MovementSounds.Num()>=4){if(IsValid(MovementSounds[0]))MovementSounds[0]->Stop();MovementSounds.RemoveAt(0);}
  const float Pitch=FMath::FRandRange(.97f,1.03f);
  const float Volume=FMath::FRandRange(.93f,1.f);
- auto* Audio=UGameplayStatics::SpawnSoundAttached(Sound,GetMesh(),NAME_None,FVector::ZeroVector,FRotator::ZeroRotator,EAttachLocation::KeepRelativeOffset,true,Volume,Pitch,0,Settings->MovementAudio->Attenuation,nullptr,true);
+ auto* Audio=Location
+  ?UGameplayStatics::SpawnSoundAtLocation(this,Sound,*Location,FRotator::ZeroRotator,Volume,Pitch,0,Settings->MovementAudio->Attenuation,nullptr,true)
+  :UGameplayStatics::SpawnSoundAttached(Sound,GetMesh(),NAME_None,FVector::ZeroVector,FRotator::ZeroRotator,EAttachLocation::KeepRelativeOffset,true,Volume,Pitch,0,Settings->MovementAudio->Attenuation,nullptr,true);
  if(!Audio)return false;
  MovementSounds.Add(Audio);LastMovementSounds[Group]=Sound;++MovementSoundPlayCount;
 #if WITH_EDITOR
- if(FParse::Param(FCommandLine::Get(),TEXT("WardrobeMovementAudioQA")))UE_LOG(LogTemp,Display,TEXT("ALS_MOVEMENT_SOUND event=%s sound=%s speed=%.1f pitch=%.3f count=%d"),*StaticEnum<EWardrobeMovementSound>()->GetNameStringByValue(int64(Event)),*Sound->GetPathName(),GetVelocity().Size2D(),Pitch,MovementSoundPlayCount);
+ if(FParse::Param(FCommandLine::Get(),TEXT("WardrobeMovementAudioQA")))UE_LOG(LogTemp,Display,TEXT("ALS_MOVEMENT_SOUND event=%s surface=%d sound=%s speed=%.1f pitch=%.3f count=%d"),*StaticEnum<EWardrobeMovementSound>()->GetNameStringByValue(int64(Event)),SurfaceIndex,*Sound->GetPathName(),GetVelocity().Size2D(),Pitch,MovementSoundPlayCount);
 #endif
  return true;
 }

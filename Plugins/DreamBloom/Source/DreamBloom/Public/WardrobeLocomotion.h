@@ -87,7 +87,8 @@ public:
  void ApplySettings();
  UFUNCTION(BlueprintCallable,Category="Movement Audio") void PlayFootstep(bool LeftFoot=true);
  bool CanPlayMovementAudio() const;
- bool PlayMovementSound(EWardrobeMovementSound Event);
+ bool PlayMovementSound(EWardrobeMovementSound Event,EPhysicalSurface Surface=SurfaceType_Default,const FVector* Location=nullptr);
+ UFUNCTION(BlueprintCallable,Category="Movement Audio") TEnumAsByte<EPhysicalSurface> DetectFootstepSurface(bool LeftFoot,FVector& ContactLocation) const;
  void StopMovementAudio();
  UPROPERTY(Transient,BlueprintReadOnly,Category="Movement Audio") int32 MovementSoundPlayCount=0;
  UPROPERTY(Transient) TArray<TObjectPtr<UAudioComponent>> MovementSounds;
