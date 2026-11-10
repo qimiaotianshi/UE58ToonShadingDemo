@@ -20,6 +20,7 @@ protected:
 private:
  friend class FWardrobeSpeechPresentationTest;
  void ClearCaption();
+ void UpdateCaptionLayout();
  TWeakObjectPtr<AWardrobeShowcase> Speaker;
  FString Caption;
  TSharedPtr<SWardrobeSpeechCard> Card;

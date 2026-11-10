@@ -20,5 +20,7 @@ struct DREAMBLOOM_API FAnimNode_WardrobeRelease : public FAnimNode_Base {
  int32 Serial=0,LastSerial=0;
  TArray<FTransform> LastPose,StartPose;
  TArray<bool> AnimatedBones;
- FBlendedCurve LastCurve,StartCurve;
+ // FBlendedCurve uses the frame memstack. Persistent snapshots must own heap storage;
+ // keeping a stack curve here writes into unrelated allocations on a later frame.
+ FBlendedHeapCurve LastCurve,StartCurve;
 };

@@ -74,7 +74,7 @@ public:
    +SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill)
     [SNew(SImage).Image(&Visual->Image).ColorAndOpacity(FLinearColor::White).Visibility(Visual->HasImage?EVisibility::HitTestInvisible:EVisibility::Collapsed)]]
    +SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(64,48)
-    [SNew(STextBlock).Text(FText::FromString(TEXT("Daniya   /   JOURNEY"))).Font(FSlateFontInfo(Visual->Font,17)).ColorAndOpacity(Gold)]
+    [SNew(STextBlock).Text(FText::FromString(TEXT("奇境漫游   /   JOURNEY"))).Font(FSlateFontInfo(Visual->Font,17)).ColorAndOpacity(Gold)]
    +SOverlay::Slot().VAlign(VAlign_Bottom)
    [SNew(SBorder).BorderImage(Solid).BorderBackgroundColor(FLinearColor(.009f,.018f,.039f,.92f)).Padding(FMargin(64,28,64,38))
     [SNew(SVerticalBox)
@@ -84,8 +84,8 @@ public:
       [SNew(STextBlock).Text(Visual->Hint).Font(FSlateFontInfo(Visual->Font,14)).ColorAndOpacity(FLinearColor(.68f,.77f,.89f)).AutoWrapText(true)]
      +SVerticalBox::Slot().AutoHeight().Padding(0,0,0,10)
       [SNew(STextBlock).Text_Lambda([V=Visual](){
-       if(V->Slow.load())return FText::FromString(TEXT("少女祈祷中……"));
-       return FText::FromString(V->Phase.load()==0?TEXT("少女祈祷中……"):V->Phase.load()==1?TEXT("少女祈祷中……"):TEXT("准备就绪"));
+       if(V->Slow.load())return FText::FromString(TEXT("场景准备时间较长，正在继续加载…"));
+       return FText::FromString(V->Phase.load()==0?TEXT("正在读取地图…"):V->Phase.load()==1?TEXT("正在准备画面…"):TEXT("准备就绪"));
       }).Font(FSlateFontInfo(Visual->Font,14)).ColorAndOpacity(FLinearColor(.90f,.94f,1))]
      +SVerticalBox::Slot().AutoHeight()
       [SNew(SBox).HeightOverride(4)[SNew(SProgressBar).Style(&ProgressStyle).Percent_Lambda([V=Visual](){return V->Phase.load()==0?TOptional<float>():TOptional<float>(V->Progress.load());}).FillColorAndOpacity(Gold)]]
@@ -153,8 +153,8 @@ bool UWardrobeLoadingSubsystem::TravelToLevel(TSoftObjectPtr<UWorld> Level,UWard
  Visual->Image.DrawAs=ESlateBrushDrawType::Image;
  Visual->Image.TintColor=FSlateColor(FLinearColor::White);
  Visual->Font=MakeShared<FCompositeFont>(NAME_None,IPluginManager::Get().FindPlugin(TEXT("DreamBloom"))->GetBaseDir()/TEXT("Resources/NotoSansSC-Regular.ttf"),EFontHinting::Default,EFontLoadingPolicy::LazyLoad);
- Visual->Destination=Destination.IsEmpty()?FText::FromString(TEXT("少女祈祷中...")):Destination;
- Visual->Hint=Settings?Settings->LoadingHint:FText::FromString(TEXT("少女祈祷中..."));
+ Visual->Destination=Destination.IsEmpty()?FText::FromString(TEXT("下一段旅程")):Destination;
+ Visual->Hint=Settings?Settings->LoadingHint:FText::FromString(TEXT("新的风景，即将展开。"));
  PackageName=Target;TravelOptions=Options;
  bActive=true;bTravelIssued=false;bSettled=false;bMapLoaded=false;bAdditionalLoading=false;bManualContinue=false;
  WarmupFrames=0;SettleFrames=0;ReadyAt=0;CompleteAt=0;StartedAt=FPlatformTime::Seconds();bQAScreenshot=false;
