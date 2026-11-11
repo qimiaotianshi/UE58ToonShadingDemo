@@ -98,7 +98,7 @@ void UWardrobeSpeechBubble::UpdateCaptionLayout(){
  if(!UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PC,Anchor,Point,true)||Screen.X<=0||Screen.Y<=0||Point.X<0||Point.Y<0||Point.X>Screen.X||Point.Y>Screen.Y){SetVisibility(ESlateVisibility::Hidden);return;}
  ForceLayoutPrepass();
  const FVector2D CardSize=Card?FVector2D(Card->GetDesiredSize()):FVector2D(WardrobeCaption::Width,126);
- FVector2D Position=Point+FVector2D(32,-CardSize.Y-12);
+ FVector2D Position=Point+FVector2D(88,-CardSize.Y-170);
  // The existing menu uses a 1600x900 centered canvas. Keep captions clear of its destination panel.
  for(TObjectIterator<UWardrobeMenu> It;It;++It)if(It->GetWorld()==GetWorld()&&It->IsInViewport()){
   const double Scale=FMath::Min(Screen.X/1600.,Screen.Y/900.);
