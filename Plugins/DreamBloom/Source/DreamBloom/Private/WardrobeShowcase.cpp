@@ -1,11 +1,13 @@
 #include "WardrobeShowcase.h"
 #include "WardrobeAISpeech.h"
+#include "WardrobeStocking.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 
 AWardrobeShowcase::AWardrobeShowcase(){
  PrimaryActorTick.bCanEverTick=true;
  AISpeech=CreateDefaultSubobject<UWardrobeAISpeechComponent>(TEXT("AISpeech"));
+ Stockings=CreateDefaultSubobject<UWardrobeStockingComponent>(TEXT("Stockings"));
  Character=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Daniya"));SetRootComponent(Character);
  Character->SetCollisionEnabled(ECollisionEnabled::NoCollision);
  Character->VisibilityBasedAnimTickOption=EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
@@ -15,6 +17,6 @@ void AWardrobeShowcase::BeginPlay(){
  if(!MenuData)MenuData=LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));
  BuildInteractionRegions();
 }
-void AWardrobeShowcase::EndPlay(const EEndPlayReason::Type Reason){bEndingShowcase=true;StopDefaultSequence();ClearLimbDrag();ClearPinch();StopPhysicsTouch();CancelInteraction(false);Super::EndPlay(Reason);}
+void AWardrobeShowcase::EndPlay(const EEndPlayReason::Type Reason){bEndingShowcase=true;StopDefaultSequence();ClearLimbDrag();ClearPinch();if(Stockings)Stockings->ResetPull();StopPhysicsTouch();CancelInteraction(false);Super::EndPlay(Reason);}
 void AWardrobeShowcase::Tick(float Dt){Super::Tick(Dt);TickSequencePhysicsBlend(Dt);TickInteraction(Dt);TickPhysicsTouch(Dt);TickLimbDrag(Dt);TickPinch(Dt);TickCursorLook(Dt);}
 AWardrobePreviewGameMode::AWardrobePreviewGameMode(){DefaultPawnClass=nullptr;}

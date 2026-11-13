@@ -1,5 +1,6 @@
 #include "WardrobeCharacters.h"
 #include "WardrobeShowcase.h"
+#include "WardrobeStocking.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 
@@ -9,7 +10,7 @@ const FWardrobeCharacterOption* AWardrobeShowcase::GetInteractionProfile() const
 }
 void AWardrobeShowcase::SetInteractionEnabled(bool Enabled){
  bInteractionEnabled=Enabled;
- if(!Enabled){ClearLimbDrag();ClearPinch();CancelInteraction(false);StopDefaultSequence();StopPhysicsTouch();FadeSequencePhysics(1,0);}
+ if(!Enabled){ClearLimbDrag();ClearPinch();if(Stockings)Stockings->ResetPull();CancelInteraction(false);StopDefaultSequence();StopPhysicsTouch();FadeSequencePhysics(1,0);}
  else if(!IsInteracting())StartDefaultSequence();
 }
 void AWardrobeShowcase::RestoreCharacterAnimBlueprint(){

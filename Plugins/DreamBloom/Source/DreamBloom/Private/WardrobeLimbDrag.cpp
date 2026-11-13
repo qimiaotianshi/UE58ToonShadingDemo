@@ -20,7 +20,7 @@ bool ValidChain(const USkeletalMesh* Mesh,const FWardrobeLimbDrag& R){
 }
 bool AWardrobeShowcase::BeginLimbDrag(const FVector& Origin,const FVector& Direction){
  const auto* P=GetInteractionProfile();
- if(!bInteractionEnabled||IsInteracting()||IsSequenceSwitching()||IsPinching()||IsReleaseAnimationPlaying()||!P||!Character||Direction.IsNearlyZero())return false;
+ if(!bInteractionEnabled||IsInteracting()||IsSequenceSwitching()||IsPinching()||IsStockingDragging()||IsReleaseAnimationPlaying()||!P||!Character||Direction.IsNearlyZero())return false;
  auto* Instance=Character->GetAnimInstance();bool HasSolver=false;
  if(Instance)for(TFieldIterator<FStructProperty> Prop(Instance->GetClass());Prop;++Prop)if(Prop->Struct==FAnimNode_WardrobeLimbIK::StaticStruct()){HasSolver=true;break;}
  if(!HasSolver)return false;

@@ -1,6 +1,7 @@
 #include "WardrobeFeedback.h"
 #include "WardrobeKawaiiForce.h"
 #include "WardrobeShowcase.h"
+#include "WardrobeStocking.h"
 #include "WardrobeCharacters.h"
 #include "WardrobeMenu.h"
 #include "WardrobeStations.h"
@@ -140,17 +141,17 @@ bool UWardrobeMenu::BeginPhysicsDrag(FVector2D Position){
  EndPhysicsDrag();if(!CanPreviewInput()||!GetOwningPlayer())return false;
  auto* Person=StationController->GetActiveCharacter();if(!Person)return false;
  FVector2D Pixel,Viewport;USlateBlueprintLibrary::AbsoluteToViewport(this,Position,Pixel,Viewport);
- FVector O,D;if(!GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,O,D)||!(Person->BeginLimbDrag(O,D)||Person->BeginPinch(O,D)||Person->BeginPhysicsDrag(O,D)))return false;
+ FVector O,D;if(!GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,O,D)||!(Person->BeginStockingPull(O,D)||Person->BeginLimbDrag(O,D)||Person->BeginPinch(O,D)||Person->BeginPhysicsDrag(O,D)))return false;
  DragCharacter=Person;return true;
 }
 void UWardrobeMenu::UpdatePhysicsDrag(FVector2D Position){
  if(!DragCharacter.IsValid())return;
  if(!CanPreviewInput()||!GetOwningPlayer()){EndPhysicsDrag();return;}
  FVector2D Pixel,Viewport;USlateBlueprintLibrary::AbsoluteToViewport(this,Position,Pixel,Viewport);
- FVector O,D;if(GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,O,D)){if(DragCharacter->IsLimbDragging())DragCharacter->UpdateLimbDrag(O,D);else if(DragCharacter->IsPinching())DragCharacter->UpdatePinch(O,D);else DragCharacter->UpdatePhysicsDrag(O,D);}
+ FVector O,D;if(GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,O,D)){if(DragCharacter->IsStockingDragging())DragCharacter->Stockings->UpdatePull(O,D);else if(DragCharacter->IsLimbDragging())DragCharacter->UpdateLimbDrag(O,D);else if(DragCharacter->IsPinching())DragCharacter->UpdatePinch(O,D);else DragCharacter->UpdatePhysicsDrag(O,D);}
 }
-void UWardrobeMenu::EndPhysicsDrag(){if(DragCharacter.IsValid()){DragCharacter->ReleaseLimbDrag();DragCharacter->ReleasePinch();DragCharacter->StopPhysicsTouch();}DragCharacter.Reset();}
-bool UWardrobeMenu::HasLimbDragGesture() const{return DragCharacter.IsValid()&&DragCharacter->HasLimbPose();}
+void UWardrobeMenu::EndPhysicsDrag(){if(DragCharacter.IsValid()){if(DragCharacter->Stockings)DragCharacter->Stockings->ReleasePull();DragCharacter->ReleaseLimbDrag();DragCharacter->ReleasePinch();DragCharacter->StopPhysicsTouch();}DragCharacter.Reset();}
+bool UWardrobeMenu::HasLimbDragGesture() const{return DragCharacter.IsValid()&&(DragCharacter->HasLimbPose()||(DragCharacter->Stockings&&DragCharacter->Stockings->HasPull()));}
 void UWardrobeMenu::StopClickEffect(){
  if(IsValid(ClickEffectPlayer)){ClickEffectPlayer->Stop();ClickEffectPlayer->RestoreState();}
  if(IsValid(ClickEffectActor))ClickEffectActor->Destroy();

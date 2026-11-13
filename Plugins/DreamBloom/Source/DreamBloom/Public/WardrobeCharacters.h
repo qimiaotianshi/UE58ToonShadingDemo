@@ -7,6 +7,7 @@
 #include "WardrobePinch.h"
 #include "WardrobeLook.h"
 #include "WardrobeLimbDrag.h"
+#include "WardrobeStocking.h"
 #include "WardrobeCharacters.generated.h"
 
 class UCurveFloat;
@@ -27,6 +28,7 @@ struct DREAMBLOOM_API FWardrobeCharacterOption {
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pinch") bool bDrawPinchRegions=false;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Limb Drag",meta=(TitleProperty="Label")) TArray<FWardrobeLimbDrag> LimbDrags;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Limb Drag") bool bDrawLimbDrags=false;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Stockings") FWardrobeStockingSettings Stockings;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Cursor Look") FWardrobeCursorLook CursorLook;
  /** Actor Tags (not component tags): exactly one actor of the required type per tag. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Scene Binding") FName CameraTag;

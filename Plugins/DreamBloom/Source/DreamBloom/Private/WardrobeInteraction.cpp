@@ -1,6 +1,7 @@
 #include "WardrobeInteraction.h"
 #include "WardrobeCharacters.h"
 #include "WardrobeShowcase.h"
+#include "WardrobeStocking.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -17,6 +18,7 @@
 #include "Camera/CameraComponent.h"
 
 void AWardrobeShowcase::BuildInteractionRegions(){
+ if(Stockings)Stockings->RefreshSurface();
  for(auto Shape:InteractionShapes)if(IsValid(Shape))Shape->DestroyComponent();
  InteractionShapes.Reset();InteractionRegionIndices.Reset();RegionReadyAt.Reset();LastReaction.Reset();InteractionReadyAt=0;
  const auto* Profile=GetInteractionProfile();if(!Profile)return;

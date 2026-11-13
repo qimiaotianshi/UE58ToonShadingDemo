@@ -17,6 +17,7 @@ class UWardrobeStoryFlow;
 class UWardrobeCharacterData;
 class UWardrobeClickEffectData;
 class UWardrobeAISpeechComponent;
+class UWardrobeStockingComponent;
 enum class EWardrobeUISound : uint8;
 
 USTRUCT(BlueprintType)
@@ -70,6 +71,7 @@ public:
  AWardrobeShowcase();
  UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="Character") TObjectPtr<USkeletalMeshComponent> Character;
  UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="AI Speech") TObjectPtr<UWardrobeAISpeechComponent> AISpeech;
+ UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="Stockings") TObjectPtr<UWardrobeStockingComponent> Stockings;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Menu") TObjectPtr<UWardrobeMenuData> MenuData;
  /** Set automatically from the DA entry whose CharacterTag resolves to this actor. */
  UPROPERTY(Transient,BlueprintReadOnly,Category="Interaction") TObjectPtr<UWardrobeCharacterData> InteractionData;
@@ -101,6 +103,8 @@ public:
  void UpdatePhysicsDrag(const FVector& Origin,const FVector& Direction);
  bool IsPhysicsDragging() const{return bPhysicsDragging;}
  bool BeginLimbDrag(const FVector& Origin,const FVector& Direction);
+ bool BeginStockingPull(const FVector& Origin,const FVector& Direction);
+ bool IsStockingDragging() const;
  void UpdateLimbDrag(const FVector& Origin,const FVector& Direction);
  void ReleaseLimbDrag();
  void ClearLimbDrag();

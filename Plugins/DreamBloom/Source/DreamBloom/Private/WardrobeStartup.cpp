@@ -58,7 +58,7 @@ public:
    +SOverlay::Slot()[SNew(SImage).Image(FCoreStyle::Get().GetBrush("WhiteBrush"))
     .ColorAndOpacity_Lambda([this]{return FLinearColor(0,0,0,Visual->FadeBaked?0.f:Visual->Closing.load());})]
    +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0,0,0,100)
-    [SNew(STextBlock).Text_Lambda([this]{return FText::FromString(Visual->SceneReady.load()?TEXT("点击运行游戏"):TEXT("少女祈祷中……"));})
+    [SNew(STextBlock).Text_Lambda([this]{return FText::FromString(Visual->SceneReady.load()?TEXT("点击运行游戏"):TEXT("正在准备奇境…"));})
      .Font(FSlateFontInfo(Visual->Font,26))
      .ColorAndOpacity_Lambda([this]{
       const float Entrance=Visual->MovieDone.load()?1.f:Visual->Closing.load();

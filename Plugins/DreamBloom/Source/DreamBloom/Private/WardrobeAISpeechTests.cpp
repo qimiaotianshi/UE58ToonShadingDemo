@@ -111,7 +111,7 @@ bool FWardrobeSpeechPresentationTest::RunTest(const FString&){
  TestEqual(TEXT("Muted speech still animates and keeps its text"),Speech->CurrentText,Clip->Text);
  Profile->VoiceVolume=std::numeric_limits<float>::quiet_NaN();Speech->TickComponent(.01f,LEVELTICK_All,nullptr);
  TestEqual(TEXT("Invalid volume cannot enter mixer"),Speech->Audio->VolumeMultiplier,1.f);
- auto* Bubble=CreateWidget<UWardrobeSpeechBubble>(GI);Speech->SpeechBubble=Bubble;Bubble->ShowCaption(Person,Clip->Text);
+ auto* Bubble=NewObject<UWardrobeSpeechBubble>();Speech->SpeechBubble=Bubble;Bubble->ShowCaption(Person,Clip->Text);
  Speech->OnAudioFinished();
  TestTrue(TEXT("Natural completion briefly retains caption for exit fade"),Bubble->bFinishing&&Bubble->Caption==Clip->Text);
  TestTrue(TEXT("Audio PCM and component text already released"),!Speech->Audio&&!Speech->Wave&&Speech->CurrentText.IsEmpty()&&Speech->GetTemporaryBytes()==0);
