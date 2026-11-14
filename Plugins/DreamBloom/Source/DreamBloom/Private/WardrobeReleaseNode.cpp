@@ -4,8 +4,8 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
 #include "Animation/AnimationPoseData.h"
-void FAnimNode_WardrobeRelease::Initialize_AnyThread(const FAnimationInitializeContext& C){Source.Initialize(C);LastPose.Reset();StartPose.Reset();LastSerial=0;}
-void FAnimNode_WardrobeRelease::CacheBones_AnyThread(const FAnimationCacheBonesContext& C){Source.CacheBones(C);LastPose.Reset();StartPose.Reset();}
+void FAnimNode_WardrobeRelease::Initialize_AnyThread(const FAnimationInitializeContext& C){Source.Initialize(C);LastPose.Reset();StartPose.Reset();LastCurve=FBlendedHeapCurve();StartCurve=FBlendedHeapCurve();LastSerial=0;}
+void FAnimNode_WardrobeRelease::CacheBones_AnyThread(const FAnimationCacheBonesContext& C){Source.CacheBones(C);LastPose.Reset();StartPose.Reset();LastCurve=FBlendedHeapCurve();StartCurve=FBlendedHeapCurve();}
 void FAnimNode_WardrobeRelease::Update_AnyThread(const FAnimationUpdateContext& C){Source.Update(C);}
 void FAnimNode_WardrobeRelease::PreUpdate(const UAnimInstance* Instance){
  Clip=nullptr;
@@ -27,8 +27,8 @@ void FAnimNode_WardrobeRelease::PreUpdate(const UAnimInstance* Instance){
 }
 void FAnimNode_WardrobeRelease::Evaluate_AnyThread(FPoseContext& Output){
  Source.Evaluate(Output);
- if(!Clip){LastPose.SetNum(Output.Pose.GetNumBones());for(auto I:Output.Pose.ForEachBoneIndex())LastPose[I.GetInt()]=Output.Pose[I];LastCurve=Output.Curve;return;}
- if(LastSerial!=Serial){StartPose=LastPose;StartCurve=LastCurve;LastSerial=Serial;}
+ if(!Clip){LastPose.SetNum(Output.Pose.GetNumBones());for(auto I:Output.Pose.ForEachBoneIndex())LastPose[I.GetInt()]=Output.Pose[I];LastCurve.CopyFrom(Output.Curve);return;}
+ if(LastSerial!=Serial){StartPose=LastPose;StartCurve.CopyFrom(LastCurve);LastSerial=Serial;}
  FPoseContext Animation(Output);Animation.ResetToRefPose();FAnimationPoseData Data(Animation);
  Clip->GetAnimationPose(Data,FAnimExtractContext(FMath::Min(Time,Clip->GetPlayLength())));
  const bool Returning=Time>Clip->GetPlayLength();

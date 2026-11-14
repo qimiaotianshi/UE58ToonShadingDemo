@@ -67,8 +67,12 @@ TSharedRef<SWidget> UWardrobeSpeechBubble::RebuildWidget(){SAssignNew(Card,SWard
 void UWardrobeSpeechBubble::ReleaseSlateResources(bool Children){Super::ReleaseSlateResources(Children);Card.Reset();}
 void UWardrobeSpeechBubble::ShowCaption(AWardrobeShowcase* Person,const FString& Text){
  Speaker=Person;Caption=Text.Left(120);bFinishing=false;FadeRemaining=0;
- if(Card)Card->SetCaption(Caption);
- SetAlignmentInViewport(FVector2D::ZeroVector);SetRenderOpacity(1.f);SetVisibility(ESlateVisibility::HitTestInvisible);
+ // Prepare a bounded viewport slot before attachment, never a full-screen white card.
+ SetVisibility(ESlateVisibility::HitTestInvisible);SetRenderOpacity(1.f);
+ SetDesiredSizeInViewport(FVector2D(WardrobeCaption::Width,126.f));
+ SetAlignmentInViewport(FVector2D::ZeroVector);SetPositionInViewport(FVector2D::ZeroVector,false);
+ TakeWidget();if(Card)Card->SetCaption(Caption);
+ UpdateCaptionLayout();
 }
 void UWardrobeSpeechBubble::ClearCaption(){
  Caption.Reset();Speaker.Reset();bFinishing=false;FadeRemaining=0;
@@ -80,13 +84,18 @@ void UWardrobeSpeechBubble::NativeTick(const FGeometry& Geometry,float Dt){
  auto* Person=Speaker.Get();auto* PC=GetOwningPlayer();auto* Mesh=Person?Person->Character.Get():nullptr;
  if(!Person||Person->IsHidden()||!Person->IsInteractionEnabled()||!Mesh||!PC||Caption.IsEmpty()){ClearCaption();return;}
  if(bFinishing){FadeRemaining-=FMath::Max(0.f,Dt);if(FadeRemaining<=0){ClearCaption();return;}SetRenderOpacity(FadeRemaining/WardrobeCaption::FadeTime);}
+ UpdateCaptionLayout();
+}
+void UWardrobeSpeechBubble::UpdateCaptionLayout(){
+ auto* Person=Speaker.Get();auto* PC=GetOwningPlayer();auto* Mesh=Person?Person->Character.Get():nullptr;
+ if(!Person||!Mesh||!PC||Caption.IsEmpty()){SetVisibility(ESlateVisibility::Hidden);return;}
  FName Head;const auto* Profile=Person->GetInteractionProfile();
  if(Profile&&Mesh->DoesSocketExist(Profile->CursorLook.AnchorBone))Head=Profile->CursorLook.AnchorBone;
  if(Head.IsNone())for(const FName Candidate:{FName(TEXT("head")),FName(TEXT("Head")),FName(TEXT("頭"))})if(Mesh->DoesSocketExist(Candidate)){Head=Candidate;break;}
  const FVector Anchor=Head.IsNone()?Mesh->Bounds.Origin+FVector(0,0,Mesh->Bounds.BoxExtent.Z*.65):Mesh->GetSocketLocation(Head);
  FVector2D Point;const FVector2D Screen=UWidgetLayoutLibrary::GetPlayerScreenWidgetGeometry(PC).GetLocalSize();
  if(!UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PC,Anchor,Point,true)||Screen.X<=0||Screen.Y<=0||Point.X<0||Point.Y<0||Point.X>Screen.X||Point.Y>Screen.Y){SetVisibility(ESlateVisibility::Hidden);return;}
- SetVisibility(ESlateVisibility::HitTestInvisible);ForceLayoutPrepass();
+ ForceLayoutPrepass();
  const FVector2D CardSize=Card?FVector2D(Card->GetDesiredSize()):FVector2D(WardrobeCaption::Width,126);
  FVector2D Position=Point+FVector2D(32,-CardSize.Y-12);
  // The existing menu uses a 1600x900 centered canvas. Keep captions clear of its destination panel.
@@ -98,4 +107,5 @@ void UWardrobeSpeechBubble::NativeTick(const FGeometry& Geometry,float Dt){
  Position.X=FMath::Clamp(Position.X,12.,FMath::Max(12.,Screen.X-CardSize.X-12));
  Position.Y=FMath::Clamp(Position.Y,12.,FMath::Max(12.,Screen.Y-CardSize.Y-12));
  SetDesiredSizeInViewport(CardSize);SetPositionInViewport(Position,false);
+ SetVisibility(ESlateVisibility::HitTestInvisible);
 }

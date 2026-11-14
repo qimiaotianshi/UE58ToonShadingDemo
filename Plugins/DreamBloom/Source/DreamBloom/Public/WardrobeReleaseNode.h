@@ -20,5 +20,6 @@ struct DREAMBLOOM_API FAnimNode_WardrobeRelease : public FAnimNode_Base {
  int32 Serial=0,LastSerial=0;
  TArray<FTransform> LastPose,StartPose;
  TArray<bool> AnimatedBones;
- FBlendedCurve LastCurve,StartCurve;
+ // Cross-frame snapshots own heap memory, never the per-frame animation memstack.
+ FBlendedHeapCurve LastCurve,StartCurve;
 };
