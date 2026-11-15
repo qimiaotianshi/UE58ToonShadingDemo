@@ -74,7 +74,7 @@ public:
    +SOverlay::Slot()[SNew(SScaleBox).Stretch(EStretch::ScaleToFill)
     [SNew(SImage).Image(&Visual->Image).ColorAndOpacity(FLinearColor::White).Visibility(Visual->HasImage?EVisibility::HitTestInvisible:EVisibility::Collapsed)]]
    +SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(64,48)
-    [SNew(STextBlock).Text(FText::FromString(TEXT("奇境漫游   /   JOURNEY"))).Font(FSlateFontInfo(Visual->Font,17)).ColorAndOpacity(Gold)]
+    [SNew(STextBlock).Text(FText::FromString(TEXT("达妮娅漫游   /   JOURNEY"))).Font(FSlateFontInfo(Visual->Font,17)).ColorAndOpacity(Gold)]
    +SOverlay::Slot().VAlign(VAlign_Bottom)
    [SNew(SBorder).BorderImage(Solid).BorderBackgroundColor(FLinearColor(.009f,.018f,.039f,.92f)).Padding(FMargin(64,28,64,38))
     [SNew(SVerticalBox)

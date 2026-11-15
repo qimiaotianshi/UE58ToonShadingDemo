@@ -295,7 +295,7 @@ void AWardrobeExplorerController::ReturnToShowcase(){
  ClosePauseMenu();auto* S=GetGameInstance()->GetSubsystem<UWardrobeSession>();auto* Menu=S&&S->ExplorationMenuData?S->ExplorationMenuData.Get():LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));
  if(Menu)if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()){
   const auto Level=S&&!S->ExplorationReturnLevel.IsNull()?S->ExplorationReturnLevel:Menu->MenuLevel;
-  if(L->TravelToLevel(Level,Menu,{},FText::FromString(TEXT("返回奇境")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"))){
+  if(L->TravelToLevel(Level,Menu,{},FText::FromString(TEXT("返回场景")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"))){
    if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){Audio->Configure(Menu->AudioData);Audio->PlayEvent(EWardrobeUISound::Back);}
   }
  }

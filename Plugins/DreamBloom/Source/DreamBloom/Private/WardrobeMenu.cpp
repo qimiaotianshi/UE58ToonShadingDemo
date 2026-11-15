@@ -142,7 +142,7 @@ public:
   DialogueStyle=Input;DialogueStyle.SetFont(Font(17)).SetPadding(FMargin(13,7)).SetFocusedForegroundColor(Wardrobe::White).SetReadOnlyForegroundColor(Wardrobe::Soft);DialogueStyle.TextStyle.SetColorAndOpacity(Wardrobe::White);
   Canvas=SNew(SCanvas);
   auto Main=SNew(SCanvas).Visibility_Lambda([this](){return MainVisible();});
-  Put(Main,48,36,200,35,Label(TEXT("奇境漫游"),25));
+  Put(Main,48,36,200,35,Label(TEXT("达妮娅漫游"),25));
   Put(Main,50,78,240,23,Label(TEXT("WONDER  /  COLLECTION"),10,Wardrobe::Soft));
   // Narrow mode bar follows the reference's four highlighted tabs.
   Put(Main,452,33,34,34,SNew(SBorder).BorderImage(&Panel).HAlign(HAlign_Center).VAlign(VAlign_Center)[Label(TEXT("Q"),15)]);
@@ -172,11 +172,11 @@ public:
   Put(Lobby,1060,801,488,53,Button(TEXT("开始游戏"),TEXT("play"),[this](){if(Owner.IsValid())Owner->StartGame();},true));
   Put(Main,0,0,1600,900,Lobby);
   auto LoginPanel=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&!Owner->IsLoggedIn()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
-  Put(LoginPanel,1110,184,360,55,Label(TEXT("欢迎来到奇境"),30));
+  Put(LoginPanel,1110,184,360,55,Label(TEXT("欢迎来到游戏"),30));
   Put(LoginPanel,1112,254,350,46,Label(TEXT("每一次相遇，都有新的风景。"),16,Wardrobe::Soft));
   Put(LoginPanel,1112,346,300,27,Label(TEXT("旅人昵称"),14));
   Put(LoginPanel,1112,385,380,60,SAssignNew(Name,SEditableTextBox).Style(&Input).HintText(Wardrobe::T(TEXT("输入名字，或直接进入"))).OnTextCommitted_Lambda([this](const FText& Text,ETextCommit::Type Kind){if(Kind==ETextCommit::OnEnter&&Owner.IsValid())Owner->Login(Text.ToString());}));
-  Put(LoginPanel,1112,482,380,58,Button(Owner.IsValid()&&Owner->HasStory()?TEXT("新游戏"):TEXT("进入奇境"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->Login(Name->GetText().ToString());},true));
+  Put(LoginPanel,1112,482,380,58,Button(Owner.IsValid()&&Owner->HasStory()?TEXT("新游戏"):TEXT("进入关卡"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->Login(Name->GetText().ToString());},true));
   Put(LoginPanel,1112,566,380,30,Label(TEXT("本地体验  ·  无需账号密码"),12,Wardrobe::Soft));
   auto LoginStory=SNew(SHorizontalBox).Visibility_Lambda([this](){return Owner.IsValid()&&Owner->HasStory()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   LoginStory->AddSlot().FillWidth(1).Padding(3)[Button(TEXT("继续游戏"),TEXT("arrow-right"),[this](){if(Owner.IsValid())Owner->ContinueGame();})];
@@ -197,7 +197,7 @@ public:
   Put(Canvas.ToSharedRef(),0,0,1600,900,Main);
   auto PlayHUD=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&(!Owner->IsMenuMap())?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   Put(PlayHUD,48,35,240,48,Button(TEXT("返回角色界面"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->ReturnToMenu();}));
-  Put(PlayHUD,1210,35,340,48,SNew(SBorder).BorderImage(&Panel).HAlign(HAlign_Center).VAlign(VAlign_Center)[Label(TEXT("奇境漫游  /  场景预览"),16)]);
+  Put(PlayHUD,1210,35,340,48,SNew(SBorder).BorderImage(&Panel).HAlign(HAlign_Center).VAlign(VAlign_Center)[Label(TEXT("达妮娅漫游  /  场景预览"),16)]);
   Put(Canvas.ToSharedRef(),0,0,1600,900,PlayHUD);
   Put(Canvas.ToSharedRef(),475,116,550,48,SNew(SBorder).BorderImage(&Toast).HAlign(HAlign_Center).VAlign(VAlign_Center).Visibility_Lambda([this](){return Owner.IsValid()&&!Owner->Message.IsEmpty()?EVisibility::HitTestInvisible:EVisibility::Collapsed;})[SNew(STextBlock).Text_Lambda([this](){return Wardrobe::T(Owner.IsValid()?Owner->Message:TEXT(""));}).Font(Font(15)).ColorAndOpacity(Wardrobe::White)]);
   auto Exit=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&Owner->QuitPrompt?EVisibility::Visible:EVisibility::Collapsed;});
@@ -349,7 +349,7 @@ void UWardrobeMenu::SelectChoice(int32 I){
 }
 void UWardrobeMenu::StartGame(){
  if(!IsMenuMap()||QuitPrompt||StorySlotsOpen)return;
- if(!IsLoggedIn()){Message=TEXT("请先进入奇境");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
+ if(!IsLoggedIn()){Message=TEXT("请先进入关卡");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();
  if(!Loading||Loading->IsLoading())return;
  const int32 I=SelectedChoice();
@@ -390,7 +390,7 @@ void UWardrobeMenu::ChooseStorySlot(int32 Index,bool Overwrite){
  const bool Success=NewGame?Story->StartNewGame(Index,PendingNewGameName,Data,Overwrite):Story->ContinueGame(Index,Data);
  if(Success){
   PlayUISound(EWardrobeUISound::SaveSlotSelect);
-  if(NewGame){StorySlotsOpen=false;Message=TEXT("欢迎来到奇境，")+(Session()?Session()->Name:PendingNewGameName);NoticeTime=3;RestoreMenuFocus();}
+  if(NewGame){StorySlotsOpen=false;Message=TEXT("欢迎来到达妮娅漫游，")+(Session()?Session()->Name:PendingNewGameName);NoticeTime=3;RestoreMenuFocus();}
   else PrepareStoryTravel();
  }
  else {Message=Story->LastError.ToString();NoticeTime=8;PlayUISound(EWardrobeUISound::Unavailable);}
@@ -456,7 +456,7 @@ void UWardrobeMenu::ReturnToMenu(){
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()){
   if(!L->IsLoading())PlayUISound(EWardrobeUISound::Back);
   const auto Map=Data?Data->MenuLevel:TSoftObjectPtr<UWorld>();
-  L->TravelToLevel(Map,Data,{},FText::FromString(TEXT("返回奇境")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"));
+  L->TravelToLevel(Map,Data,{},FText::FromString(TEXT("返回关卡")),TEXT("game=/Script/DreamBloom.WardrobeMenuGameMode"));
  }
 }
 void UWardrobeMenu::PlayUISound(EWardrobeUISound Event){if(GetGameInstance())if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->PlayEvent(Event);}
