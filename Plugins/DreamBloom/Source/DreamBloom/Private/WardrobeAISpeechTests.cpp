@@ -10,11 +10,13 @@
 #include "Engine/World.h"
 #include "Misc/ScopeExit.h"
 #include "WardrobeAISpeechPaths.h"
+#include "WardrobeAISpeechSubsystem.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "WardrobeSpeechBubble.h"
 #include "Components/AudioComponent.h"
+#include "Serialization/JsonSerializer.h"
 #include <limits>
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeSpeechBoundaries,"Wardrobe.AISpeech.WaveAndResponseBounds",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
@@ -118,6 +120,55 @@ bool FWardrobeSpeechPresentationTest::RunTest(const FString&){
  Speech->CancelSpeech();TestTrue(TEXT("Explicit cancellation immediately clears caption and speaker"),Bubble->Caption.IsEmpty()&&!Bubble->Speaker.IsValid());
  Bubble->ShowCaption(Person,TEXT("新台词"));TestFalse(TEXT("New sentence cancels previous exit fade"),Bubble->bFinishing);
  Bubble->FinishCaption(false);Bubble->ClearCaption();TestTrue(TEXT("Fade completion releases final caption"),Bubble->Caption.IsEmpty());
+ return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeSpeechDAKeyTest,"Wardrobe.AISpeech.AssetKeyAndAuthorizationBoundaries",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeSpeechDAKeyTest::RunTest(const FString&){
+ const FString Fixture=TEXT("fixture-api-key");FString Header,Error;
+ TestTrue(TEXT("DA key builds a bearer authorization header"),WardrobeAISpeech::BuildChatAuthorization(Fixture,Header,Error));
+ TestTrue(TEXT("Exactly one bearer prefix"),Header==TEXT("Bearer ")+Fixture);
+ TestTrue(TEXT("Pasted prefix and outside whitespace accepted"),WardrobeAISpeech::BuildChatAuthorization(TEXT("  bearer ")+Fixture+TEXT("\t"),Header,Error));
+ TestTrue(TEXT("Prefix is not duplicated"),Header==TEXT("Bearer ")+Fixture);
+ TestFalse(TEXT("Blank key rejected"),WardrobeAISpeech::BuildChatAuthorization(TEXT(" \t"),Header,Error));
+ TestTrue(TEXT("Failure clears old header and directs to DA"),Header.IsEmpty()&&Error.Contains(TEXT("DA")));
+ for(const FString& Bad:{Fixture+TEXT("\r\nInjected: value"),Fixture+TEXT(" middle"),Fixture+FString::ChrN(1,TCHAR(127)),FString::ChrN(4097,TEXT('x'))}){
+  TestFalse(TEXT("Header injection or oversized key rejected"),WardrobeAISpeech::BuildChatAuthorization(Bad,Header,Error));
+  TestTrue(TEXT("Errors contain no credential and no stale header"),Header.IsEmpty()&&!Error.Contains(Fixture));
+ }
+ FWardrobeSpeechJob Job;Job.ApiKey=Fixture;Job.Text=TEXT("你好。");
+ for(const auto& Body:{WardrobeAISpeech::BuildChatRequest(Job),WardrobeAISpeech::BuildVoiceRequest(Job)}){
+  FString JSON;FJsonSerializer::Serialize(Body,TJsonWriterFactory<>::Create(&JSON));
+  TestFalse(TEXT("Chat and TTS bodies never contain the key"),JSON.Contains(Fixture));
+  TestFalse(TEXT("Authorization is not a JSON field"),Body->HasField(TEXT("Authorization"))||Body->HasField(TEXT("api_key")));
+ }
+ return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeSpeechDAServiceTest,"Wardrobe.AISpeech.DAServiceSettingsIgnoreLegacyINI",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWardrobeSpeechDAServiceTest::RunTest(const FString&){
+ const FString Ini=FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Config/WardrobeAISpeech.local.ini"));
+ const bool Existed=FPaths::FileExists(Ini);TArray<uint8> Original;
+ if(Existed&&!FFileHelper::LoadFileToArray(Original,*Ini))return false;
+ const FString Temp=FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Automation/DAService_")+FGuid::NewGuid().ToString(EGuidFormats::Digits)));
+ ON_SCOPE_EXIT{if(Existed)FFileHelper::SaveArrayToFile(Original,*Ini);else IFileManager::Get().Delete(*Ini);IFileManager::Get().DeleteDirectory(*Temp,false,true);};
+ IFileManager::Get().MakeDirectory(*FPaths::GetPath(Ini),true);
+ const FString Legacy=TEXT("[WardrobeAISpeech]\nTTSRoot=Content/MissingLegacyFolder\nAutoStart=true\nReferenceAudio=legacy.wav\nReferenceText=legacy prompt\n");
+ if(!FFileHelper::SaveStringToFile(Legacy,*Ini))return false;
+ auto* GI=NewObject<UGameInstance>(GEngine);GI->InitializeStandalone();auto* W=GI->GetWorld();
+ ON_SCOPE_EXIT{GI->Shutdown();GEngine->DestroyWorldContext(W);W->DestroyWorld(false);};
+ auto* Service=GI->GetSubsystem<UWardrobeAISpeechSubsystem>();
+ FString After;FFileHelper::LoadFileToString(After,*Ini);
+ TestTrue(TEXT("Subsystem initialization does not create or rewrite legacy INI"),After==Legacy);
+ auto* Profile=NewObject<UWardrobeAISpeechData>();Profile->bAutoStart=false;
+ IFileManager::Get().MakeDirectory(*FPaths::Combine(Temp,TEXT("runtime")),true);
+ FFileHelper::SaveStringToFile(TEXT("fixture"),*FPaths::Combine(Temp,TEXT("runtime/python.exe")));
+ FFileHelper::SaveStringToFile(TEXT("fixture"),*FPaths::Combine(Temp,TEXT("api_v2.py")));
+ Profile->TTSRoot=Temp;Service->ConfigureService(Profile);
+ TestEqual(TEXT("Configured DA path wins over old local INI"),Service->GetResolvedTTSRoot(),Temp);
+ TestFalse(TEXT("Disabling auto start still permits configuration without a request"),Service->IsBusy());
+ auto* Person=W->SpawnActor<AWardrobeShowcase>();auto* Speech=Person->FindComponentByClass<UWardrobeAISpeechComponent>();
+ FWardrobeSpeechJob Job;Job.Owner=Speech;Job.Ticket=Speech->GetTicket();Job.TTSEndpoint=TEXT("http://127.0.0.1:9880/tts");Job.Text=TEXT("fixture");
+ TestTrue(TEXT("Missing DA reference values complete with a configuration error"),Service->Start(Job));
+ TestTrue(TEXT("Old INI reference values are not silently used"),Speech->LastError.Contains(TEXT("AI Speech DA"))&&!Service->IsBusy());
  return true;
 }
 #endif

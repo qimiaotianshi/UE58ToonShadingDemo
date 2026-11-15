@@ -3,7 +3,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UObject/SoftObjectPtr.h"
 #include "WardrobeAISpeechSubsystem.generated.h"
-class UWardrobeAISpeechComponent;class UNNEModelData;
+class UWardrobeAISpeechComponent;class UWardrobeAISpeechData;class UNNEModelData;
 struct FWardrobeSpeechJob;struct FWardrobeSpeechRequest;struct FWardrobeSpeechWorker;
 struct FStreamableHandle;
 
@@ -18,7 +18,8 @@ public:
  bool Start(const FWardrobeSpeechJob& Job);
  void Cancel(UWardrobeAISpeechComponent* Owner);
  UFUNCTION(BlueprintPure,Category="AI Speech") bool IsBusy() const;
- UFUNCTION(BlueprintPure,Category="AI Speech") FString GetLocalConfigPath() const;
+ /** Configure before the startup movie warmup, from the selected character's DA. */
+ UFUNCTION(BlueprintCallable,Category="AI Speech") void ConfigureService(UWardrobeAISpeechData* Profile);
  /** Absolute runtime path resolved from the project-relative TTSRoot configuration. */
  UFUNCTION(BlueprintPure,Category="AI Speech") FString GetResolvedTTSRoot() const;
  /** Load and initialize the reusable face solver during the startup cover, without generating dialogue. */
@@ -29,12 +30,13 @@ private:
  void RequestVoice(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R);
  void Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,TArray<uint8> Bytes);
  void Finish(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,const FString& Error);
- void EnsureService();
+ void EnsureService(const UWardrobeAISpeechData* Profile);
+ TWeakObjectPtr<UWardrobeAISpeechData> ServiceProfile;
+ bool bServiceConfigured=false,bServiceCheckPending=false,bServiceStarted=false;
  TSharedPtr<FWardrobeSpeechRequest,ESPMode::ThreadSafe> Active;
  TSharedPtr<FWardrobeSpeechWorker,ESPMode::ThreadSafe> Worker;
  TSharedPtr<FStreamableHandle> LoadHandle;
  // A reflected soft reference makes the streaming model discoverable by the cooker.
  UPROPERTY() TSoftObjectPtr<UNNEModelData> FaceModel;
- FString ApiKey;
  bool bEnding=false,bPrewarming=false;
 };

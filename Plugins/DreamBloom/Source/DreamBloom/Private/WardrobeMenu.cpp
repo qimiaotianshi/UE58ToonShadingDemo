@@ -1,5 +1,6 @@
 #include "WardrobeMenu.h"
 #include "WardrobeAISpeech.h"
+#include "WardrobeAISpeechSubsystem.h"
 #include "WardrobeStartup.h"
 #include "WardrobeStory.h"
 #include "WardrobeShowcase.h"
@@ -412,6 +413,7 @@ void UWardrobeMenu::NativeConstruct(){
    Message=StationController->LastError.ToString();NoticeTime=15;
   }
   StationController->SetPreviewEnabled(true);Showcase=StationController->GetActiveCharacter();
+  if(Showcase&&Showcase->AISpeech)if(auto* AI=GetGameInstance()->GetSubsystem<UWardrobeAISpeechSubsystem>())AI->ConfigureService(const_cast<UWardrobeAISpeechData*>(Showcase->AISpeech->GetProfile()));
  }
  CapturePreviewCamera();
  if(auto* PC=GetOwningPlayer()){PC->bShowMouseCursor=true;FInputModeUIOnly Input;Input.SetWidgetToFocus(SlateMenu);Input.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);PC->SetInputMode(Input);}

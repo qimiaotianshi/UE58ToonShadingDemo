@@ -23,13 +23,34 @@ struct DREAMBLOOM_API FWardrobeSpeechMorph {
  UPROPERTY(EditAnywhere,BlueprintReadWrite) FName Morph;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ClampMin="0",ClampMax="4")) float Gain=1;
 };
+/** Static facial expression layered over speech; vowel morphs are protected at runtime. */
+USTRUCT(BlueprintType)
+struct DREAMBLOOM_API FWardrobeSpeechEmotionMorph {
+ GENERATED_BODY()
+ UPROPERTY(EditAnywhere,BlueprintReadWrite) FName Morph;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ClampMin="0",ClampMax="1",UIMin="0",UIMax="1")) float Weight=.5f;
+};
+USTRUCT(BlueprintType)
+struct DREAMBLOOM_API FWardrobeSpeechEmotion {
+ GENERATED_BODY()
+ /** Exact tag the AI can return, e.g. 【开心】. Use one unique name per preset. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite) FName Emotion;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ClampMin="0",ClampMax="2")) float Intensity=1.f;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(TitleProperty="Morph")) TArray<FWardrobeSpeechEmotionMorph> Morphs;
+};
+UENUM(BlueprintType)
+enum class EWardrobeTTSDevice : uint8 { CPU, CUDA };
 UCLASS(BlueprintType)
 class DREAMBLOOM_API UWardrobeAISpeechData : public UDataAsset {
  GENERATED_BODY()
 public:
  UWardrobeAISpeechData();
+ /** Append built-in expressions by name, preserving edited presets and custom entries. */
+ UFUNCTION(BlueprintCallable,CallInEditor,Category="Emotions",meta=(DisplayName="补齐默认心情表情")) void AddMissingDefaultEmotions();
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Speech") bool bEnabled=true;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue") FString ChatEndpoint=TEXT("https://api.deepseek.com/chat/completions");
+ /** Stored in this asset; password masking is only an editor display feature. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(DisplayName="API Key",PasswordField="true")) FString ApiKey;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue") FString Model=TEXT("deepseek-chat");
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(MultiLine="true")) FString Persona;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(TitleProperty="Topic")) TArray<FWardrobeSpeechTopic> Topics;
@@ -37,11 +58,19 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Timing",meta=(ClampMin="1",Units="s")) float MinInterval=10;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Timing",meta=(ClampMin="1",Units="s")) float MaxInterval=30;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice") FString TTSEndpoint=TEXT("http://127.0.0.1:9880/tts");
+ /** Relative to the UE project. Content/AI discovers the portable bundle in its wrapper folders. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Local TTS",meta=(DisplayName="AI Folder")) FString TTSRoot=TEXT("Content/AI");
+ /** Starts the bundled local server when this profile is first selected. Disable for an external server. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Local TTS",meta=(DisplayName="Auto Start Local Service")) bool bAutoStart=true;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Local TTS",meta=(DisplayName="Compute Device",EditCondition="bAutoStart")) EWardrobeTTSDevice TTSDevice=EWardrobeTTSDevice::CPU;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Local TTS",meta=(DisplayName="CPU Threads",ClampMin="1",ClampMax="8",EditCondition="bAutoStart && TTSDevice == EWardrobeTTSDevice::CPU")) int32 CPUThreads=4;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice") FFilePath ReferenceAudio;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice",meta=(MultiLine="true")) FString ReferenceText;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice") FString Language=TEXT("zh");
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice",meta=(ClampMin="0",ClampMax="100",UIMin="0",UIMax="100")) float VoiceVolume=1.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Face",meta=(TitleProperty="Morph")) TArray<FWardrobeSpeechMorph> Morphs;
+ /** Unsupported mesh morphs are skipped. Empty presets still provide a valid mood tag. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Emotions",meta=(TitleProperty="Emotion")) TArray<FWardrobeSpeechEmotion> Emotions;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Face",meta=(ClampMin="0",ClampMax="2")) float ExpressionIntensity=.65f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Face",meta=(ClampMin="0",ClampMax="1",Units="s")) float FaceBlendTime=.15f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Advanced",AdvancedDisplay,meta=(ClampMin="1",ClampMax="30",Units="s")) float MaxAudioDuration=15;
@@ -60,6 +89,7 @@ public:
  UPROPERTY(Transient,BlueprintReadOnly,Category="AI Speech") EWardrobeSpeechState State=EWardrobeSpeechState::Disabled;
  UPROPERTY(Transient,BlueprintReadOnly,Category="AI Speech") FString LastError;
  UPROPERTY(Transient,BlueprintReadOnly,Category="AI Speech") FString CurrentText;
+ UPROPERTY(Transient,BlueprintReadOnly,Category="AI Speech") FName CurrentEmotion;
  UFUNCTION(BlueprintCallable,Category="AI Speech") bool RequestDialogueNow();
  /** Ask the character to reply to one player message through the configured LLM. */
  UFUNCTION(BlueprintCallable,Category="AI Speech") bool RequestReply(const FString& Message);
@@ -99,5 +129,6 @@ private:
  double NextRequestTime=0,StartedAt=0;
  float FaceWeight=0,FadeAge=0,FadeFrom=0,PlaybackTime=0;
  int32 PreviousTopic=INDEX_NONE;
+ FName LastPlayedEmotion;
  bool bAutomaticPaused=false;
 };
