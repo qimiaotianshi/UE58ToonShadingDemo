@@ -1,6 +1,7 @@
 #include "WardrobeMenu.h"
 #include "WardrobeAISpeech.h"
 #include "WardrobeAISpeechSubsystem.h"
+#include "WardrobeCursor.h"
 #include "WardrobeStartup.h"
 #include "WardrobeStory.h"
 #include "WardrobeShowcase.h"
@@ -66,8 +67,11 @@ public:
  TMap<int32,TSharedPtr<FSlateBrush>> Thumbs;
  TSharedPtr<SEditableTextBox> Name;
  TSharedPtr<SEditableTextBox> DialogueInput;
+ FString PreviousDialogueText;
+ bool bUpdatingDialogueText=false;
+ void ClearDialogueInput(){TGuardValue<bool> Guard(bUpdatingDialogueText,true);PreviousDialogueText.Reset();if(DialogueInput)DialogueInput->SetText(FText::GetEmpty());}
  void FocusDialogueInput(){if(DialogueInput)FSlateApplication::Get().SetAllUserFocus(DialogueInput,EFocusCause::SetDirectly);}
- void SubmitDialogue(){if(Owner.IsValid()&&DialogueInput&&Owner->SendDialogue(DialogueInput->GetText().ToString()))DialogueInput->SetText(FText::GetEmpty());FocusDialogueInput();}
+ void SubmitDialogue(){if(Owner.IsValid()&&DialogueInput&&Owner->SendDialogue(DialogueInput->GetText().ToString()))ClearDialogueInput();FocusDialogueInput();}
  FString Resources;
  FButtonStyle Clear,Golden,Card;
  FEditableTextBoxStyle Input,DialogueStyle;
@@ -190,7 +194,12 @@ public:
   Put(Dialogue,24,53,676,24,SNew(STextBlock).Text_Lambda([this](){return Wardrobe::T(Owner.IsValid()?Owner->DialogueStatus():TEXT(""));}).Font(Font(12)).ColorAndOpacity(Wardrobe::Soft));
   Put(Dialogue,24,86,678,70,SNew(SScrollBox)+SScrollBox::Slot()[SNew(STextBlock).Text_Lambda([this](){return Wardrobe::T(Owner.IsValid()?Owner->DialogueReplyText():TEXT(""));}).Font(Font(17)).ColorAndOpacity(Wardrobe::White).AutoWrapText(true)]);
   Put(Dialogue,24,172,542,44,SAssignNew(DialogueInput,SEditableTextBox).Style(&DialogueStyle).HintText(Wardrobe::T(TEXT("想和她说些什么？")))
-   .OnTextChanged_Lambda([this](const FText& Text){if(Text.ToString().Len()>UWardrobeAISpeechComponent::MaxPlayerMessageCharacters)DialogueInput->SetText(Wardrobe::T(Text.ToString().Left(UWardrobeAISpeechComponent::MaxPlayerMessageCharacters)));})
+   .OnTextChanged_Lambda([this](const FText& Text){
+    if(bUpdatingDialogueText)return;
+    const FString Edited=Text.ToString().Left(UWardrobeAISpeechComponent::MaxPlayerMessageCharacters);
+    if(Text.ToString()!=Edited){TGuardValue<bool> Guard(bUpdatingDialogueText,true);DialogueInput->SetText(Wardrobe::T(Edited));}
+    if(Owner.IsValid())Owner->DialogueTextEdited(PreviousDialogueText,Edited);PreviousDialogueText=Edited;
+   })
    .OnTextCommitted_Lambda([this](const FText&,ETextCommit::Type Kind){if(Kind==ETextCommit::OnEnter)SubmitDialogue();}));
   Put(Dialogue,582,172,120,44,SNew(SBox).IsEnabled_Lambda([this](){return Owner.IsValid()&&Owner->CanSendDialogue()&&DialogueInput&&!DialogueInput->GetText().ToString().TrimStartAndEnd().IsEmpty();})[Button(TEXT("发送"),TEXT("arrow-right"),[this](){SubmitDialogue();},true)]);
   Put(Main,300,568,726,236,Dialogue);
@@ -217,6 +226,7 @@ public:
  }
  virtual FReply OnPreviewMouseButtonDown(const FGeometry&,const FPointerEvent& Event)override{
   if(Owner.IsValid()&&Event.GetEffectingButton()==EKeys::LeftMouseButton)Owner->PlayClickEffect(Event.GetScreenSpacePosition());
+  if(Owner.IsValid()&&Owner->DialogueOpen&&DialogueInput&&Event.GetEffectingButton()==EKeys::LeftMouseButton&&DialogueInput->GetCachedGeometry().IsUnderLocation(Event.GetScreenSpacePosition()))Owner->ClickDialogueInput();
   return FReply::Unhandled();
  }
  virtual bool SupportsKeyboardFocus()const override{return true;}
@@ -293,19 +303,19 @@ void UWardrobeMenu::OpenDialogue(){
  if(!IsMenuMap()||QuitPrompt||StorySlotsOpen||!IsValid(StationController)||StationController->IsTransitioning())return;
  if(auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(Loading->IsLoading())return;
  auto* Speech=ActiveSpeech();const auto* Profile=Speech?Speech->GetProfile():nullptr;
- if(!Profile||!Profile->bEnabled){Message=TEXT("当前角色还没有开启对话");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
+ if(!Profile||!Profile->bEnabled){Message=TEXT("当前角色还没有开启对话");NoticeTime=3;PlayUISound(EWardrobeUISound::AIUnavailable);return;}
  if(SlateMenu)SlateMenu->CancelPointerGesture();
  DialogueSpeech=Speech;DialogueReply.Reset();DialogueOpen=true;Speech->SetAutomaticPaused(true);
- if(SlateMenu&&SlateMenu->DialogueInput)SlateMenu->DialogueInput->SetText(FText::GetEmpty());
- PlayUISound(EWardrobeUISound::Confirm);RestoreMenuFocus();
+ if(SlateMenu)SlateMenu->ClearDialogueInput();NextTypingSoundTime=0;
+ PlayUISound(EWardrobeUISound::AIOpen);RestoreMenuFocus();
 }
 void UWardrobeMenu::EndDialogue(bool PlaySound,bool RestoreFocus){
  if(!DialogueOpen&&!DialogueSpeech.IsValid())return;
  DialogueOpen=false;
  if(auto* Speech=DialogueSpeech.Get()){Speech->CancelSpeech();Speech->SetAutomaticPaused(false);}
  DialogueSpeech.Reset();DialogueReply.Reset();
- if(SlateMenu&&SlateMenu->DialogueInput)SlateMenu->DialogueInput->SetText(FText::GetEmpty());
- if(PlaySound)PlayUISound(EWardrobeUISound::Back);
+ if(SlateMenu)SlateMenu->ClearDialogueInput();
+ if(PlaySound)PlayUISound(EWardrobeUISound::AIClose);
  if(RestoreFocus)RestoreMenuFocus();
 }
 void UWardrobeMenu::CloseDialogue(){EndDialogue(true,true);}
@@ -314,8 +324,14 @@ bool UWardrobeMenu::CanSendDialogue() const{
  return DialogueOpen&&Speech&&Speech==ActiveSpeech()&&Speech->IsIdleAllowed()&&!Speech->IsBusy();
 }
 bool UWardrobeMenu::SendDialogue(const FString& Text){
- if(!CanSendDialogue()||!DialogueSpeech->RequestReply(Text)){PlayUISound(EWardrobeUISound::Unavailable);return false;}
- DialogueReply.Reset();PlayUISound(EWardrobeUISound::Confirm);return true;
+ if(!CanSendDialogue()||!DialogueSpeech->RequestReply(Text)){PlayUISound(EWardrobeUISound::AIUnavailable);return false;}
+ DialogueReply.Reset();PlayUISound(EWardrobeUISound::AISend);return true;
+}
+void UWardrobeMenu::ClickDialogueInput(){if(DialogueOpen)PlayUISound(EWardrobeUISound::AIInputFocus);}
+void UWardrobeMenu::DialogueTextEdited(const FString& Previous,const FString& Current){
+ if(!DialogueOpen||Previous==Current)return;
+ const double Now=FPlatformTime::Seconds();if(Now<NextTypingSoundTime)return;
+ NextTypingSoundTime=Now+.055;PlayUISound(EWardrobeUISound::AITyping);
 }
 FString UWardrobeMenu::DialogueStatus() const{
  const auto* Speech=DialogueSpeech.Get();if(!Speech)return TEXT("当前角色暂时无法对话");
@@ -407,6 +423,7 @@ void UWardrobeMenu::NativeConstruct(){
  Super::NativeConstruct();
  if(HasStory())GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>()->Configure(Data->StoryFlow);
  if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>())Audio->Configure(Data?Data->AudioData.Get():nullptr);
+ if(Data)if(auto* CursorService=GetGameInstance()->GetSubsystem<UWardrobeCursorSubsystem>())CursorService->Configure(Data->Cursor);
  if(IsMenuMap()){
   StationController=NewObject<UWardrobeStationController>(this);
   if(!StationController->Initialize(GetOwningPlayer(),Data?Data->CharacterData.Get():nullptr,Session()?Session()->Mode:INDEX_NONE)){

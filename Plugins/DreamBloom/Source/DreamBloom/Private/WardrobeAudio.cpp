@@ -10,6 +10,7 @@ const FWardrobeSoundEntry& UWardrobeAudioData::GetEntry(EWardrobeUISound Event) 
  #define ENTRY(Name) case EWardrobeUISound::Name:return Name;
  ENTRY(ActionSwitch) ENTRY(MapSelect)   ENTRY(StartGame) ENTRY(Login)
  ENTRY(Back) ENTRY(Confirm) ENTRY(Cancel) ENTRY(Unavailable)    ENTRY(ResetCamera)
+ ENTRY(AIOpen) ENTRY(AIInputFocus) ENTRY(AITyping) ENTRY(AISend) ENTRY(AIClose) ENTRY(AIUnavailable)
  #undef ENTRY
  case EWardrobeUISound::NewGame:return NewGame.Sound.IsNull()?Confirm:NewGame;
  case EWardrobeUISound::ContinueGame:return ContinueGame.Sound.IsNull()?StartGame:ContinueGame;
@@ -24,7 +25,7 @@ void UWardrobeAudioSubsystem::Configure(UWardrobeAudioData* Data){
  if(Settings==Data)return;
  Settings=Data;LoadedSounds.Reset();
  if(!Settings)return;
- for(int32 I=0;I<=int32(EWardrobeUISound::Resume);I++){
+ for(int32 I=0;I<=int32(EWardrobeUISound::AIUnavailable);I++){
   if(USoundBase* Sound=Settings->GetEntry(EWardrobeUISound(I)).Sound.LoadSynchronous())LoadedSounds.AddUnique(Sound);
  }
 }

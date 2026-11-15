@@ -10,7 +10,8 @@ UENUM(BlueprintType)
 enum class EWardrobeUISound : uint8 {
  ActionSwitch=0 UMETA(DisplayName="Station Switch"), MapSelect=1, StartGame=4, Login=5,
  PinchGrab=14, PinchMove=15, PinchRelease=16, Back=6, Confirm=7, Cancel=8, Unavailable=9, ResetCamera=13,
- NewGame=17, ContinueGame=18, LoadGame=19, SaveSlotSelect=20, Pause=21, Resume=22
+ NewGame=17, ContinueGame=18, LoadGame=19, SaveSlotSelect=20, Pause=21, Resume=22,
+ AIOpen=23, AIInputFocus=24, AITyping=25, AISend=26, AIClose=27, AIUnavailable=28
 };
 USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobeSoundEntry {
@@ -49,6 +50,13 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Story UI") FWardrobeSoundEntry SaveSlotSelect;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pause UI") FWardrobeSoundEntry Pause;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Pause UI") FWardrobeSoundEntry Resume;
+ /** AI entries are independent. Empty means silent, with no generic UI fallback. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Open Dialogue")) FWardrobeSoundEntry AIOpen;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Click Text Input")) FWardrobeSoundEntry AIInputFocus;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Typing")) FWardrobeSoundEntry AITyping;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Send Message")) FWardrobeSoundEntry AISend;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Close Dialogue")) FWardrobeSoundEntry AIClose;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI UI",meta=(DisplayName="Unavailable")) FWardrobeSoundEntry AIUnavailable;
  const FWardrobeSoundEntry& GetEntry(EWardrobeUISound Event) const;
 };
 

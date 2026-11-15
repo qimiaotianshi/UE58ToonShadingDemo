@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/GameModeBase.h"
 #include "WardrobeLimbDrag.h"
+#include "WardrobeCursor.h"
 #include "WardrobeShowcase.generated.h"
 
 class USkeletalMeshComponent;
@@ -41,6 +42,7 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Characters") TObjectPtr<UWardrobeCharacterData> CharacterData;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Interaction",meta=(ClampMin="1",ClampMax="50")) float ClickDragThreshold=6.f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="UI Audio") TObjectPtr<UWardrobeAudioData> AudioData;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Cursor") FWardrobeCursorSettings Cursor;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Click Effect") TObjectPtr<UWardrobeClickEffectData> ClickEffect;
  /** One opening movie before the login/showcase UI, once per game session. */
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Startup Movie") bool bPlayStartupMovie=true;

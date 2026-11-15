@@ -42,6 +42,9 @@ public:
  UFUNCTION(BlueprintCallable,Category="Dialogue") void OpenDialogue();
  UFUNCTION(BlueprintCallable,Category="Dialogue") void CloseDialogue();
  UFUNCTION(BlueprintCallable,Category="Dialogue") bool SendDialogue(const FString& Text);
+ /** Called by the editable widget for user edits only, including IME/paste/delete. */
+ void DialogueTextEdited(const FString& Previous,const FString& Current);
+ void ClickDialogueInput();
  UFUNCTION(BlueprintPure,Category="Dialogue") bool CanSendDialogue() const;
  FString DialogueStatus() const;
  FString DialogueReplyText() const{return DialogueReply;}
@@ -97,6 +100,7 @@ private:
  UWardrobeAISpeechComponent* ActiveSpeech() const;
  void EndDialogue(bool PlaySound,bool RestoreFocus);
  TWeakObjectPtr<UWardrobeAISpeechComponent> DialogueSpeech;
+ double NextTypingSoundTime=0;
  FString DialogueReply;
  FString PendingNewGameName=TEXT("旅人");
  TSharedPtr<SWardrobeMenu> SlateMenu;
