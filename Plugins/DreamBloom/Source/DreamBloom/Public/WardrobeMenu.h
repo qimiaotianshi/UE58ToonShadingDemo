@@ -11,7 +11,7 @@ class AWardrobeShowcase;
 class UWardrobeStationController;
 class SWardrobeMenu;
 class UTexture2D;
-class UWardrobeAISpeechComponent;
+class UWardrobeAISpeechComponent;class UWardrobeAIEventSubsystem;
 
 UCLASS()
 class DREAMBLOOM_API UWardrobeSession : public UGameInstanceSubsystem {
@@ -48,6 +48,9 @@ public:
  UFUNCTION(BlueprintPure,Category="Dialogue") bool CanSendDialogue() const;
  FString DialogueStatus() const;
  FString DialogueReplyText() const{return DialogueReply;}
+ UWardrobeAIEventSubsystem* AIEvents() const;
+ void CancelAIEvent();
+ UFUNCTION(BlueprintCallable,Category="AI Events") bool ChooseAIEventOption(int32 Index);
  UFUNCTION(BlueprintCallable,Category="Story") void ContinueGame();
  UFUNCTION(BlueprintCallable,Category="Menu") void ReturnToLogin();
  void OpenStorySlots(bool NewGame);

@@ -6,7 +6,7 @@
 #include "WardrobeAISpeech.generated.h"
 
 class UAudioComponent;class UWardrobeAISpeechWave;class UNNEModelData;class UWardrobeAISpeechSubsystem;class UWardrobeSpeechBubble;
-struct FWardrobeSpeechClip;
+struct FWardrobeSpeechClip;struct FWardrobeSpeechJob;
 
 USTRUCT(BlueprintType)
 struct DREAMBLOOM_API FWardrobeSpeechTopic {
@@ -55,6 +55,14 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(MultiLine="true")) FString Persona;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(TitleProperty="Topic")) TArray<FWardrobeSpeechTopic> Topics;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(ClampMin="5",ClampMax="120")) int32 MaxTextCharacters=60;
+ /** Stable ID shared by outfits of the same character, and independent of actor tags. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events") FName CharacterId=TEXT("Daniya");
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events") bool bEventsEnabled=true;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events",meta=(MultiLine="true",EditCondition="bEventsEnabled")) FString EventBackground;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events",meta=(ClampMin="10",Units="s",EditCondition="bEventsEnabled")) float EventMinInterval=60;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events",meta=(ClampMin="10",Units="s",EditCondition="bEventsEnabled")) float EventMaxInterval=120;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events",meta=(ClampMin="0",ClampMax="100")) int32 InitialMood=60;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI Events",meta=(ClampMin="0",ClampMax="10",EditCondition="bEventsEnabled")) int32 MaxMoodChange=5;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Timing",meta=(ClampMin="1",Units="s")) float MinInterval=10;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Timing",meta=(ClampMin="1",Units="s")) float MaxInterval=30;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Voice") FString TTSEndpoint=TEXT("http://127.0.0.1:9880/tts");
@@ -109,6 +117,11 @@ public:
  const UWardrobeAISpeechData* GetProfile() const;
  bool IsIdleAllowed() const;
  uint64 GetTicket() const{return Generation;}
+ /** Copies DA/mesh settings on the game thread, without making a request. */
+ bool BuildPreparationJob(FWardrobeSpeechJob& Job) const;
+ void SetEventReserved(bool Reserved);
+ bool PlayPreparedClip(TSharedPtr<const FWardrobeSpeechClip,ESPMode::ThreadSafe> Prepared);
+ bool IsEventReserved() const{return bEventReserved;}
  virtual void BeginPlay() override;
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
  virtual void TickComponent(float Dt,ELevelTick Type,FActorComponentTickFunction* ThisTick) override;
@@ -130,5 +143,5 @@ private:
  float FaceWeight=0,FadeAge=0,FadeFrom=0,PlaybackTime=0;
  int32 PreviousTopic=INDEX_NONE;
  FName LastPlayedEmotion;
- bool bAutomaticPaused=false;
+ bool bAutomaticPaused=false,bEventReserved=false;
 };

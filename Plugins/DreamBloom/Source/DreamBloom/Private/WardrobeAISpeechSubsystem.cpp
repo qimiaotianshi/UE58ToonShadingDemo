@@ -28,7 +28,7 @@ struct FWardrobeSpeechRequest {
  FWardrobeSpeechJob Job;
  TAtomic<bool> Cancelled{false};
  FHttpRequestPtr HTTP;
- TArray<uint8> Body;int32 Limit=0;bool bOverflow=false;
+ TArray<uint8> Body;FString Plan;int32 Limit=0;bool bOverflow=false;
 };
 namespace {
 FString Encode(const TSharedRef<FJsonObject>& O){FString S;FJsonSerializer::Serialize(O,TJsonWriterFactory<>::Create(&S));return S;}
@@ -120,6 +120,10 @@ bool UWardrobeAISpeechSubsystem::Start(const FWardrobeSpeechJob& Input){
  auto R=MakeShared<FWardrobeSpeechRequest,ESPMode::ThreadSafe>();R->Job=Input;
  if(!R->Job.ReferenceAudio.IsEmpty()&&FPaths::IsRelative(R->Job.ReferenceAudio))if(auto P=IPluginManager::Get().FindPlugin(TEXT("DreamBloom")))R->Job.ReferenceAudio=FPaths::ConvertRelativePathToFull(FPaths::Combine(P->GetBaseDir(),R->Job.ReferenceAudio));
  Active=R;
+ if(!Input.PlanJSON.IsEmpty()){
+  if(!ValidHTTP(Input.Endpoint)){Finish(R,TEXT("Configure Chat Endpoint in the AI Speech DA."));return true;}
+  RequestText(R);return true;
+ }
  if(!ValidHTTP(Input.TTSEndpoint)||R->Job.ReferenceAudio.IsEmpty()||R->Job.ReferenceText.IsEmpty()){
   Finish(R,TEXT("Configure Reference Audio and its exact Reference Text in the AI Speech DA."));return true;
  }
@@ -135,16 +139,23 @@ void UWardrobeAISpeechSubsystem::Finish(TSharedRef<FWardrobeSpeechRequest,ESPMod
  check(IsInGameThread());R->HTTP.Reset();R->Body.Empty();R->Job.ApiKey.Reset();
  if(Active==R)Active.Reset();
  if(bEnding||R->Cancelled.Load())return;
+ if(R->Job.OnPlan){auto Done=MoveTemp(R->Job.OnPlan);Done(R->Plan,Error);return;}
+ if(R->Job.OnPrepared){auto Done=MoveTemp(R->Job.OnPrepared);Done(nullptr,Error);return;}
  if(auto* Owner=R->Job.Owner.Get())if(Owner->GetTicket()==R->Job.Ticket&&!Error.IsEmpty())Owner->Fail(R->Job.Ticket,Error);
 }
 void UWardrobeAISpeechSubsystem::RequestText(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R){
  FString Authorization,AuthorizationError;if(!WardrobeAISpeech::BuildChatAuthorization(R->Job.ApiKey,Authorization,AuthorizationError)){Finish(R,AuthorizationError);return;}
  const auto O=WardrobeAISpeech::BuildChatRequest(R->Job);
- auto H=MakeHTTP(R,R->Job.Endpoint,Encode(O),64*1024);H->SetHeader(TEXT("Authorization"),Authorization);R->Job.ApiKey.Reset();
+ auto H=MakeHTTP(R,R->Job.Endpoint,R->Job.PlanJSON.IsEmpty()?Encode(O):R->Job.PlanJSON,64*1024);H->SetHeader(TEXT("Authorization"),Authorization);R->Job.ApiKey.Reset();
  H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),R](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
   auto* S=Weak.Get();if(!S||S->bEnding){R->HTTP.Reset();return;}
   if(R->Cancelled.Load()){S->Finish(R,TEXT(""));return;}
   if(!OK||!Response||Response->GetResponseCode()!=200||R->bOverflow){S->Finish(R,TEXT("Chat request failed, timed out, or exceeded the response limit."));return;}
+  if(R->Job.OnPlan){
+   TSharedPtr<FJsonObject> Envelope;const TArray<TSharedPtr<FJsonValue>>* Choices=nullptr;const TSharedPtr<FJsonObject>* Message=nullptr;
+   if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(UTF8(R->Body)),Envelope)||!Envelope||!Envelope->TryGetArrayField(TEXT("choices"),Choices)||Choices->IsEmpty()||!(*Choices)[0]->AsObject()||!(*Choices)[0]->AsObject()->TryGetObjectField(TEXT("message"),Message)||!(*Message)->TryGetStringField(TEXT("content"),R->Plan)||R->Plan.Len()>8000){S->Finish(R,TEXT("Invalid event plan response."));return;}
+   S->Finish(R,TEXT(""));return;
+  }
   FString Error;if(!WardrobeAISpeech::ParseDialogue(UTF8(R->Body),R->Job.MaxCharacters,R->Job.Text,Error,&R->Job.Emotions,&R->Job.Emotion)){S->Finish(R,Error);return;}
   R->HTTP.Reset();R->Body.Empty();S->RequestVoice(R);
  });if(!H->ProcessRequest())Finish(R,TEXT("Could not submit the chat request."));
@@ -152,7 +163,7 @@ void UWardrobeAISpeechSubsystem::RequestText(TSharedRef<FWardrobeSpeechRequest,E
 void UWardrobeAISpeechSubsystem::RequestVoice(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R){
  R->Job.ApiKey.Reset(); // Direct TTS requests do not need chat credentials.
  if(R->Cancelled.Load()){Finish(R,TEXT(""));return;}
- if(auto* Owner=R->Job.Owner.Get())Owner->SetStage(R->Job.Ticket,EWardrobeSpeechState::GeneratingVoice);
+ if(!R->Job.OnPrepared)if(auto* Owner=R->Job.Owner.Get())Owner->SetStage(R->Job.Ticket,EWardrobeSpeechState::GeneratingVoice);
  const auto O=WardrobeAISpeech::BuildVoiceRequest(R->Job);
  if(O->GetStringField(TEXT("text")).IsEmpty()){Finish(R,TEXT("No spoken text remains after emotion tags are removed."));return;}
  R->Job.Text=O->GetStringField(TEXT("text")); // Captions and solved clips use the same clean line as TTS.
@@ -166,7 +177,7 @@ void UWardrobeAISpeechSubsystem::RequestVoice(TSharedRef<FWardrobeSpeechRequest,
 }
 void UWardrobeAISpeechSubsystem::Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,TArray<uint8> Bytes){
  if(R->Cancelled.Load()){Finish(R,TEXT(""));return;}
- if(auto* Owner=R->Job.Owner.Get())Owner->SetStage(R->Job.Ticket,EWardrobeSpeechState::SolvingFace);
+ if(!R->Job.OnPrepared)if(auto* Owner=R->Job.Owner.Get())Owner->SetStage(R->Job.Ticket,EWardrobeSpeechState::SolvingFace);
  if(!Worker){
   // Loading is async; the completion only establishes a GT lifetime pin. NNE inference runs below.
   auto Data=MakeShared<TArray<uint8>,ESPMode::ThreadSafe>(MoveTemp(Bytes));
@@ -220,6 +231,9 @@ void UWardrobeAISpeechSubsystem::Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode
   Clip->SolveSeconds=FPlatformTime::Seconds()-Begin;
   AsyncTask(ENamedThreads::GameThread,[Weak,R,Clip,Error]{
    auto* S=Weak.Get();if(!S||S->bEnding)return;
+   if(!R->Cancelled.Load()&&Error.IsEmpty()&&R->Job.OnPrepared){
+    auto Done=MoveTemp(R->Job.OnPrepared);S->Finish(R,TEXT(""));Done(Clip,TEXT(""));return;
+   }
    if(!R->Cancelled.Load()&&Error.IsEmpty())if(auto* O=R->Job.Owner.Get())O->AcceptClip(R->Job.Ticket,Clip);
    if(!R->Cancelled.Load())UE_LOG(LogWardrobeAISpeech,Display,TEXT("Speech prepared on worker: emotion=%s audio=%.2fs solve=%.3fs transient=%lld bytes"),*Clip->Emotion.ToString(),Clip->Duration(),Clip->SolveSeconds,Clip->Bytes());
    S->Finish(R,Error);

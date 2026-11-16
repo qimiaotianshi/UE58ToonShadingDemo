@@ -139,6 +139,7 @@ void AWardrobeShowcase::StopPhysicsTouch(){
 }
 bool UWardrobeMenu::BeginPhysicsDrag(FVector2D Position){
  EndPhysicsDrag();if(!CanPreviewInput()||!GetOwningPlayer())return false;
+ CancelAIEvent();
  auto* Person=StationController->GetActiveCharacter();if(!Person)return false;
  FVector2D Pixel,Viewport;USlateBlueprintLibrary::AbsoluteToViewport(this,Position,Pixel,Viewport);
  FVector O,D;if(!GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,O,D)||!(Person->BeginStockingPull(O,D)||Person->BeginLimbDrag(O,D)||Person->BeginPinch(O,D)||Person->BeginPhysicsDrag(O,D)))return false;

@@ -18,6 +18,11 @@ struct FWardrobeSpeechJob {
  TArray<FWardrobeSpeechEmotion> Emotions;
  FName Emotion=TEXT("平静");
  FName PreviousEmotion;
+ int32 MoodScore=60;FString RecentEvents;
+ // Native callbacks are GT-only; clips exclusively own heap arrays.
+ FString PlanJSON;
+ TFunction<void(const FString&,const FString&)> OnPlan;
+ TFunction<void(TSharedPtr<const FWardrobeSpeechClip,ESPMode::ThreadSafe>,const FString&)> OnPrepared;
  int32 MaxCharacters=60;float MaxDuration=15,Timeout=45,ExpressionIntensity=.65f;
 };
 class FJsonObject;

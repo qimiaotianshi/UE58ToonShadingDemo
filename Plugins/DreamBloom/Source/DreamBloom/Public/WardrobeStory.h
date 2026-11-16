@@ -6,6 +6,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Containers/Ticker.h"
+#include "Async/Future.h"
 #include "WardrobeStory.generated.h"
 
 class UBoxComponent; class ULevelSequence; class ULevelSequencePlayer; class ALevelSequenceActor;
@@ -33,11 +34,20 @@ public:
  UFUNCTION(BlueprintPure,Category="Story") TArray<FString> ValidateConfiguration() const;
 };
 
+USTRUCT()
+struct DREAMBLOOM_API FWardrobeCharacterMood {
+ GENERATED_BODY()
+ UPROPERTY(SaveGame) int32 Value=60;
+ UPROPERTY(SaveGame) TArray<FString> RecentEvents;
+ UPROPERTY(SaveGame) TArray<FString> SettledChoices;
+};
+
 UCLASS()
 class DREAMBLOOM_API UWardrobeStorySave : public USaveGame {
  GENERATED_BODY()
 public:
- UPROPERTY(SaveGame) int32 FormatVersion=1;
+ UPROPERTY(SaveGame) int32 FormatVersion=2;
+ UPROPERTY(SaveGame) TMap<FName,FWardrobeCharacterMood> CharacterMoods;
  UPROPERTY(SaveGame) FString PlayerName;
  UPROPERTY(SaveGame) FString FlowPath;
  UPROPERTY(SaveGame) TArray<FName> CompletedStories;
@@ -106,16 +116,30 @@ public:
  UPROPERTY(BlueprintReadOnly,Category="Story") TObjectPtr<UWardrobeStoryFlow> Flow;
  UPROPERTY(BlueprintReadOnly,Category="Story") int32 ActiveSlot=INDEX_NONE;
  FString SlotName(int32 Index) const;
+ UFUNCTION(BlueprintPure,Category="AI Mood") int32 GetCharacterMood(FName CharacterId,int32 DefaultMood=60) const;
+ FString GetCharacterEventHistory(FName CharacterId) const;
+ /** Accepts a choice once; the queued disk snapshot keeps the existing story/location. */
+ bool CommitCharacterChoice(FName CharacterId,const FString& ChoiceId,int32 ExpectedMood,int32 Delta,int32 DefaultMood,const FString& Summary);
+ UFUNCTION(BlueprintPure,Category="Story") bool HasPendingSaves() const;
+ uint64 GetCampaignRevision() const{return CampaignRevision;}
+ /** Flush is used only for shutdown and offline authoring tests. */
+ void FlushPendingSaves();
  /** Shared with the fullscreen click widget; a release after the wait arms the next click. */
  void ArmContinueClick(){bClickArmed=bWaiting;}
  bool ClickContinue();
  void AdvanceRuntime(float DeltaSeconds);
  ULevelSequencePlayer* GetStoryPlayer() const{return Player;}
 private:
+ friend class FWardrobeAIEventSaveTest;
+ friend class FWardrobeAIEventChoiceTest;
  friend class FWardrobeStoryRuntimeTest;
  friend class FWardrobeStorySaveTest;
  friend class FWardrobeDestinationMenuTest;
  bool Tick(float DeltaSeconds);
+ bool QueueSaveSnapshot();void PumpSaves();
+ TMap<FString,TArray<uint8>> PendingSaves;
+ TFuture<bool> SaveTask;FString WritingSlot;
+ uint64 CampaignRevision=0;
  bool TravelToSave(UWardrobeStorySave* Candidate,int32 Slot,UWardrobeMenuData* Menu);
  bool IsSaveUsable(const UWardrobeStorySave* Candidate) const;
  int32 CurrentStepIndex() const;

@@ -24,7 +24,7 @@ bool FWardrobeStoryRuntimeTest::RunTest(const FString&){
  auto* Camera=W->SpawnActor<ACameraActor>();PC->SetViewTarget(Camera);const auto* ExpectedView=PC->GetViewTarget();PC->SetControlRotation(FRotator(10,20,0));Pawn->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
  auto* Flow=NewObject<UWardrobeStoryFlow>();Story->Flow=Flow;Flow->Steps.SetNum(2);
  const FString Package=W->GetOutermost()->GetName();
- for(int32 I=0;I<2;++I){auto& Step=Flow->Steps[I];Step.StoryId=I==0?TEXT("First"):TEXT("Second");Step.TriggerId=I==0?TEXT("AreaA"):TEXT("AreaB");Step.Level=TSoftObjectPtr<UWorld>(FSoftObjectPath(Package+TEXT(".")+FPackageName::GetLongPackageAssetName(Package)));Step.Sequence=LoadObject<ULevelSequence>(nullptr,TEXT("/Game/BluePrint/Story/LS_StoryDemo01.LS_StoryDemo01"));}
+ for(int32 I=0;I<2;++I){auto& Step=Flow->Steps[I];Step.StoryId=I==0?TEXT("First"):TEXT("Second");Step.TriggerId=I==0?TEXT("AreaA"):TEXT("AreaB");Step.Level=TSoftObjectPtr<UWorld>(FSoftObjectPath(Package+TEXT(".")+FPackageName::GetLongPackageAssetName(Package)));Step.Sequence=LoadObject<ULevelSequence>(nullptr,TEXT("/Game/Wardrobe/Story/LS_StoryDemo01.LS_StoryDemo01"));}
  if(!TestNotNull(TEXT("Authored demo Sequence with wait events"),Flow->Steps[0].Sequence.Get()))return false;
  Pawn->GetCapsuleComponent()->SetGenerateOverlapEvents(true);Pawn->GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);Pawn->GetCapsuleComponent()->SetCollisionObjectType(ECC_Pawn);
  auto* Trigger=W->SpawnActor<AWardrobeStoryTrigger>();Trigger->TriggerId=TEXT("AreaB");Pawn->DispatchBeginPlay();Trigger->DispatchBeginPlay();Trigger->Box->UpdateOverlaps();Pawn->GetCapsuleComponent()->UpdateOverlaps();
@@ -59,7 +59,8 @@ bool FWardrobeStoryRuntimeTest::RunTest(const FString&){
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWardrobeStorySaveTest,"DreamBloom.Story.SlotsValidationAndStableIDs",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
 bool FWardrobeStorySaveTest::RunTest(const FString&){
  auto* GI=NewObject<UGameInstance>(GEngine);GI->InitializeStandalone();auto* W=GI->GetWorld();auto* Story=GI->GetSubsystem<UWardrobeStorySubsystem>();
- auto* Source=LoadObject<UWardrobeStoryFlow>(nullptr,TEXT("/Game/BluePrint/Story/DA_StoryFlow.DA_StoryFlow"));if(!TestNotNull(TEXT("Saved narrative DA"),Source))return false;
+ auto* Source=NewObject<UWardrobeStoryFlow>();Source->Steps.SetNum(2);
+ for(int32 I=0;I<2;++I){auto& Step=Source->Steps[I];Step.StoryId=FName(*FString::Printf(TEXT("SaveTest%d"),I));Step.TriggerId=Step.StoryId;Step.Level=FSoftObjectPath(TEXT("/Game/Wardrobe/Maps/L_WardrobeMain.L_WardrobeMain"));Step.Sequence=FSoftObjectPath(TEXT("/Game/Wardrobe/Story/LS_StoryDemo01.LS_StoryDemo01"));}
  auto* Flow=DuplicateObject<UWardrobeStoryFlow>(Source,GI);Flow->SaveNamespace=TEXT("StoryAutomation_")+FGuid::NewGuid().ToString(EGuidFormats::Digits);TestTrue(TEXT("Demo references exist"),Flow->ValidateConfiguration().IsEmpty());TestTrue(TEXT("Configure"),Story->Configure(Flow));
  const auto Empty=Story->GetSaveSlots();TestEqual(TEXT("Default maximum three slots"),Empty.Num(),3);TestFalse(TEXT("No existing save in isolated namespace"),Empty[0].bExists);
  auto* Saved=NewObject<UWardrobeStorySave>(Story);Saved->FlowPath=Flow->GetPathName();Saved->NextStoryId=Flow->Steps[1].StoryId;Saved->CompletedStories.Add(Flow->Steps[0].StoryId);Saved->Level=Flow->Steps[0].Level;Saved->PlayerName=TEXT("测试旅人");Saved->SavedAt=FDateTime::UtcNow();Saved->bHasPlayerTransform=true;Saved->PlayerTransform=FTransform(FRotator(0,45,0),FVector(1,2,100));

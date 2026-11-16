@@ -1,4 +1,5 @@
 #include "WardrobeStory.h"
+#include "Async/Async.h"
 #include "WardrobeLoading.h"
 #include "WardrobeMenu.h"
 #include "WardrobeShowcase.h"
@@ -134,13 +135,13 @@ void UWardrobeStorySubsystem::Initialize(FSubsystemCollectionBase& Collection){
  }
 }
 void UWardrobeStorySubsystem::Deinitialize(){
- SaveCheckpoint();CancelCinematic();FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);FWorldDelegates::OnWorldCleanup.Remove(CleanupHandle);
+ SaveCheckpoint();FlushPendingSaves();CancelCinematic();FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);FWorldDelegates::OnWorldCleanup.Remove(CleanupHandle);
  GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()->OnTravelCompleted.Remove(TravelHandle);Save=nullptr;Flow=nullptr;Super::Deinitialize();
 }
 bool UWardrobeStorySubsystem::Configure(UWardrobeStoryFlow* InFlow){
  if(!InFlow||bActive)return false;
  const auto Errors=InFlow->ValidateConfiguration();if(!Errors.IsEmpty()){LastError=FText::FromString(FString::Join(Errors,TEXT("\n")));UE_LOG(LogTemp,Warning,TEXT("WARDROBE_STORY_CONFIG %s"),*LastError.ToString());return false;}
- if(Flow!=InFlow){Save=nullptr;ActiveSlot=INDEX_NONE;bRestorePending=false;}Flow=InFlow;LastError=FText::GetEmpty();return true;
+ if(Flow!=InFlow){++CampaignRevision;Save=nullptr;ActiveSlot=INDEX_NONE;bRestorePending=false;}Flow=InFlow;LastError=FText::GetEmpty();return true;
 }
 FString UWardrobeStorySubsystem::SlotName(int32 Index) const{return Flow?FString::Printf(TEXT("%s_%02d"),*Flow->SaveNamespace,Index):FString();}
 int32 UWardrobeStorySubsystem::CurrentStepIndex() const {
@@ -149,7 +150,7 @@ int32 UWardrobeStorySubsystem::CurrentStepIndex() const {
 }
 FName UWardrobeStorySubsystem::GetCurrentStoryId() const {return Save&&!Save->bStoryComplete?Save->NextStoryId:NAME_None;}
 bool UWardrobeStorySubsystem::IsSaveUsable(const UWardrobeStorySave* Candidate) const{
- if(!Candidate||!Flow||Candidate->FormatVersion!=1||Candidate->FlowPath!=Flow->GetPathName()||Candidate->Level.IsNull()||!FPackageName::DoesPackageExist(Candidate->Level.ToSoftObjectPath().GetLongPackageName()))return false;
+ if(!Candidate||!Flow||(Candidate->FormatVersion<1||Candidate->FormatVersion>2)||Candidate->FlowPath!=Flow->GetPathName()||Candidate->Level.IsNull()||!FPackageName::DoesPackageExist(Candidate->Level.ToSoftObjectPath().GetLongPackageName()))return false;
  if(Candidate->bHasPlayerTransform&&(Candidate->PlayerTransform.ContainsNaN()||!Candidate->PlayerTransform.GetRotation().IsNormalized()||Candidate->ControlRotation.ContainsNaN()))return false;
  return Candidate->bStoryComplete||Flow->Steps.ContainsByPredicate([Candidate](const FWardrobeStoryStep& Step){return Step.StoryId==Candidate->NextStoryId;});
 }
@@ -168,11 +169,12 @@ bool UWardrobeStorySubsystem::TravelToSave(UWardrobeStorySave* Candidate,int32 S
  if(!IsSaveUsable(Candidate)||bActive||!GetGameInstance())return false;
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(!Loading||Loading->IsLoading())return false;
  if(!Loading->TravelToLevel(Candidate->Level,Menu,{},StoryText(TEXT("继续旅程")),TEXT("game=/Game/BluePrint/ALS/Game/BP_ALSGameMode.BP_ALSGameMode_C"))){LastError=StoryText(TEXT("无法加载存档地图，请检查地图与 GameMode 是否加入打包"));return false;}
- Save=Candidate;ActiveSlot=Slot;bRestorePending=true;ObservedWorld.Reset();
+ ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;bRestorePending=true;ObservedWorld.Reset();
  if(auto* Session=GetGameInstance()->GetSubsystem<UWardrobeSession>()){Session->Name=Save->PlayerName;Session->LoggedIn=true;Session->ExplorationMenuData=Menu;Session->ExplorationReturnLevel=Save->ReturnLevel;}
  return true;
 }
 bool UWardrobeStorySubsystem::StartNewGame(int32 Slot,const FString& Name,UWardrobeMenuData* Menu,bool bOverwrite){
+ if(HasPendingSaves()){LastError=StoryText(TEXT("正在保存，请稍后重试"));return false;}
  if(!Flow||!Flow->Steps.IsValidIndex(0)||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16)||bActive||bRestorePending)return false;
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(Loading&&Loading->IsLoading())return false;
  if(UGameplayStatics::DoesSaveGameExist(SlotName(Slot),0)&&!bOverwrite){LastError=StoryText(TEXT("此存档已存在，请确认覆盖或选择空槽"));return false;}
@@ -183,12 +185,13 @@ bool UWardrobeStorySubsystem::StartNewGame(int32 Slot,const FString& Name,UWardr
  auto* Candidate=NewObject<UWardrobeStorySave>(this);Candidate->FlowPath=Flow->GetPathName();Candidate->PlayerName=Name.TrimStartAndEnd().Left(16);if(Candidate->PlayerName.IsEmpty())Candidate->PlayerName=TEXT("旅人");
  Candidate->NextStoryId=Flow->Steps[0].StoryId;Candidate->Level=Menu->Levels[Initial].Level;Candidate->MenuData=Menu;Candidate->ReturnLevel=StoryWorldAsset(GetWorld());
  Candidate->SavedAt=FDateTime::UtcNow();if(!UGameplayStatics::SaveGameToSlot(Candidate,SlotName(Slot),0)){LastError=StoryText(TEXT("新存档写入失败，请检查存档目录"));UE_LOG(LogTemp,Warning,TEXT("WARDROBE_STORY_SAVE_FAILED"));return false;}
- Save=Candidate;ActiveSlot=Slot;ObservedWorld.Reset();LastError=FText::GetEmpty();
+ ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;ObservedWorld.Reset();LastError=FText::GetEmpty();
  if(Session){Session->Name=Candidate->PlayerName;Session->LoggedIn=true;Session->SelectedMap=Initial;Session->ExplorationMenuData=Menu;Session->ExplorationReturnLevel=Candidate->ReturnLevel;}
  UE_LOG(LogTemp,Display,TEXT("WARDROBE_STORY_NEW_SLOT slot=%d next=%s defaultMap=%s (destination selection pending)"),Slot,*Candidate->NextStoryId.ToString(),*Candidate->Level.ToString());
  return true;
 }
 bool UWardrobeStorySubsystem::ContinueGame(int32 Slot,UWardrobeMenuData* Menu){
+ if(HasPendingSaves()){LastError=StoryText(TEXT("正在保存，请稍后重试"));return false;}
  if(!Flow||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16))return false;
  auto* Candidate=Cast<UWardrobeStorySave>(UGameplayStatics::LoadGameFromSlot(SlotName(Slot),0));
  if(!IsSaveUsable(Candidate)){LastError=StoryText(TEXT("存档无效或剧情编号、地图已被移除"));return false;}
@@ -200,13 +203,49 @@ bool UWardrobeStorySubsystem::ContinueLatest(UWardrobeMenuData* Menu){
 }
 bool UWardrobeStorySubsystem::SaveCheckpoint(){
  if(!Save||!Flow||ActiveSlot==INDEX_NONE||bRestorePending||!GetWorld())return false;
- if(!bActive)if(auto* Pawn=UGameplayStatics::GetPlayerPawn(this,0)){
+ if(!bActive&&Cast<AWardrobeExplorerController>(UGameplayStatics::GetPlayerController(this,0)))if(auto* Pawn=UGameplayStatics::GetPlayerPawn(this,0)){
   Save->Level=StoryWorldAsset(GetWorld());Save->PlayerTransform=Pawn->GetActorTransform();Save->bHasPlayerTransform=true;
   if(auto* PC=UGameplayStatics::GetPlayerController(this,0))Save->ControlRotation=PC->GetControlRotation();
  }
- Save->SavedAt=FDateTime::UtcNow();const bool Ok=UGameplayStatics::SaveGameToSlot(Save,SlotName(ActiveSlot),0);
+ Save->SavedAt=FDateTime::UtcNow();const bool Ok=QueueSaveSnapshot();
  if(!Ok){LastError=StoryText(TEXT("存档写入失败，请检查存档目录"));UE_LOG(LogTemp,Warning,TEXT("WARDROBE_STORY_SAVE_FAILED"));}
  else UE_LOG(LogTemp,Display,TEXT("WARDROBE_STORY_SAVED slot=%d next=%s"),ActiveSlot,*Save->NextStoryId.ToString());return Ok;
+}
+bool UWardrobeStorySubsystem::HasPendingSaves() const{return SaveTask.IsValid()||!PendingSaves.IsEmpty();}
+bool UWardrobeStorySubsystem::QueueSaveSnapshot(){
+ check(IsInGameThread());if(!Save||!Flow||ActiveSlot==INDEX_NONE)return false;
+ TArray<uint8> Bytes;Save->FormatVersion=2;if(!UGameplayStatics::SaveGameToMemory(Save,Bytes))return false;
+ PendingSaves.Add(SlotName(ActiveSlot),MoveTemp(Bytes));PumpSaves();return true;
+}
+void UWardrobeStorySubsystem::PumpSaves(){
+ check(IsInGameThread());
+ if(SaveTask.IsValid()){
+  if(!SaveTask.IsReady())return;const bool OK=SaveTask.Get();SaveTask=TFuture<bool>();
+  if(!OK){LastError=StoryText(TEXT("存档写入失败，请检查存档目录"));UE_LOG(LogTemp,Error,TEXT("WARDROBE_STORY_ASYNC_SAVE_FAILED slot=%s"),*WritingSlot);}
+  WritingSlot.Reset();
+ }
+ if(PendingSaves.IsEmpty())return;
+ auto It=PendingSaves.CreateIterator();WritingSlot=It.Key();auto Bytes=MoveTemp(It.Value());It.RemoveCurrent();
+ SaveTask=Async(EAsyncExecution::ThreadPool,[Slot=WritingSlot,Bytes=MoveTemp(Bytes)]{return UGameplayStatics::SaveDataToSlot(Bytes,Slot,0);});
+}
+void UWardrobeStorySubsystem::FlushPendingSaves(){
+ while(HasPendingSaves()){if(SaveTask.IsValid())SaveTask.Wait();PumpSaves();}
+}
+int32 UWardrobeStorySubsystem::GetCharacterMood(FName Id,int32 DefaultMood) const{
+ const auto* M=Save?Save->CharacterMoods.Find(Id):nullptr;return FMath::Clamp(M?M->Value:DefaultMood,0,100);
+}
+FString UWardrobeStorySubsystem::GetCharacterEventHistory(FName Id) const{
+ const auto* M=Save?Save->CharacterMoods.Find(Id):nullptr;return M?FString::Join(M->RecentEvents,TEXT("\n")):FString();
+}
+bool UWardrobeStorySubsystem::CommitCharacterChoice(FName Id,const FString& Choice,int32 Expected,int32 Delta,int32 DefaultMood,const FString& Summary){
+ check(IsInGameThread());if(!Save||!Flow||ActiveSlot==INDEX_NONE||Id.IsNone()||Choice.IsEmpty()||Choice.Len()>100||GetCharacterMood(Id,DefaultMood)!=Expected)return false;
+ auto* Existing=Save->CharacterMoods.Find(Id);if(Existing&&Existing->SettledChoices.Contains(Choice))return false;
+ const bool Had=Existing!=nullptr;FWardrobeCharacterMood Before=Had?*Existing:FWardrobeCharacterMood();
+ auto& M=Save->CharacterMoods.FindOrAdd(Id);M.Value=FMath::Clamp(Expected+FMath::Clamp(Delta,-10,10),0,100);
+ M.SettledChoices.Add(Choice);if(M.SettledChoices.Num()>64)M.SettledChoices.RemoveAt(0,M.SettledChoices.Num()-64);
+ M.RecentEvents.Add(Summary.Left(240));if(M.RecentEvents.Num()>8)M.RecentEvents.RemoveAt(0,M.RecentEvents.Num()-8);
+ Save->SavedAt=FDateTime::UtcNow();if(QueueSaveSnapshot())return true;
+ if(Had)Save->CharacterMoods.Add(Id,MoveTemp(Before));else Save->CharacterMoods.Remove(Id);return false;
 }
 bool UWardrobeStorySubsystem::TryTrigger(AWardrobeStoryTrigger* Trigger){
  if(bActive||bRestorePending||Trigger==BlockedTrigger.Get()||!IsValid(Trigger)||!Trigger->Box||!GetGameInstance())return false;
@@ -288,7 +327,8 @@ void UWardrobeStorySubsystem::CancelCinematic(){
 void UWardrobeStorySubsystem::OnWorldCleanup(UWorld* World,bool,bool){
  if(World==ObservedWorld.Get()||(HiddenPawn.IsValid()&&HiddenPawn->GetWorld()==World)){CancelCinematic();ObservedWorld.Reset();}
 }
-bool UWardrobeStorySubsystem::Tick(float DeltaSeconds){AdvanceRuntime(DeltaSeconds);
+bool UWardrobeStorySubsystem::Tick(float DeltaSeconds){
+ PumpSaves();AdvanceRuntime(DeltaSeconds);
 #if WITH_EDITOR
  if(FParse::Param(FCommandLine::Get(),TEXT("WardrobeStoryQA")))RunStoryQA();
 #endif

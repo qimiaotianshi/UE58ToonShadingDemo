@@ -1,5 +1,6 @@
 #include "WardrobeMenu.h"
 #include "WardrobeAISpeech.h"
+#include "WardrobeAIEvent.h"
 #include "WardrobeAISpeechSubsystem.h"
 #include "WardrobeCursor.h"
 #include "WardrobeStartup.h"
@@ -203,6 +204,22 @@ public:
    .OnTextCommitted_Lambda([this](const FText&,ETextCommit::Type Kind){if(Kind==ETextCommit::OnEnter)SubmitDialogue();}));
   Put(Dialogue,582,172,120,44,SNew(SBox).IsEnabled_Lambda([this](){return Owner.IsValid()&&Owner->CanSendDialogue()&&DialogueInput&&!DialogueInput->GetText().ToString().TrimStartAndEnd().IsEmpty();})[Button(TEXT("发送"),TEXT("arrow-right"),[this](){SubmitDialogue();},true)]);
   Put(Main,300,568,726,236,Dialogue);
+  // The cached event replaces the dialogue panel while a choice is pending.
+  auto Event=SNew(SCanvas).Visibility_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return E&&E->IsVisible()?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
+  Put(Event,0,0,726,236,SNew(SBorder).BorderImage(&Panel));
+  Put(Event,24,18,676,30,SNew(STextBlock).Text_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return Wardrobe::T(E?E->GetTitle():FString());}).Font(Font(20)).ColorAndOpacity(Wardrobe::Pink));
+  Put(Event,24,60,678,80,SNew(SScrollBox)+SScrollBox::Slot()[SNew(STextBlock).Text_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return Wardrobe::T(E?E->GetDescription():FString());}).Font(Font(17)).ColorAndOpacity(Wardrobe::White).AutoWrapText(true)]);
+  Put(Event,24,140,676,20,SNew(STextBlock).Text_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return Wardrobe::T(E&&E->CanChoose()?TEXT("你想怎么回应？"):TEXT("听她说完，再回应她…"));}).Font(Font(12)).ColorAndOpacity(Wardrobe::Soft));
+  for(int32 I=0;I<2;++I)Put(Event,24+I*344,174,334,44,
+   SNew(SButton).ButtonStyle(&Golden).IsFocusable(false).IsEnabled_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return E&&E->CanChoose();})
+   .OnClicked_Lambda([this,I](){if(Owner.IsValid())Owner->ChooseAIEventOption(I);return FReply::Handled();})
+   [SNew(STextBlock).Text_Lambda([this,I](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return Wardrobe::T(E?E->GetOptionLabel(I):FString());}).Font(Font(15)).ColorAndOpacity(Wardrobe::White).OverflowPolicy(ETextOverflowPolicy::Ellipsis)]);
+  Put(Main,300,568,726,236,Event);
+  auto Mood=SNew(SCanvas).Visibility_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;auto* GI=Owner.IsValid()?Owner->GetGameInstance():nullptr;auto* Story=GI?GI->GetSubsystem<UWardrobeStorySubsystem>():nullptr;return E&&Story&&Story->HasCampaign()?EVisibility::HitTestInvisible:EVisibility::Collapsed;});
+  Put(Mood,0,0,180,68,SNew(SBorder).BorderImage(&Selected));
+  Put(Mood,14,9,152,22,SNew(STextBlock).Text_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return Wardrobe::T(FString::Printf(TEXT("心情  %d / 100"),E?E->GetMood():60));}).Font(Font(14)).ColorAndOpacity(Wardrobe::Pink));
+  Put(Mood,14,42,152,8,SNew(SProgressBar).Percent_Lambda([this](){auto* E=Owner.IsValid()?Owner->AIEvents():nullptr;return E?E->GetMood()/100.f:.6f;}).FillColorAndOpacity(Wardrobe::Rose));
+  Put(Main,54,289,180,68,Mood);
   Put(Canvas.ToSharedRef(),0,0,1600,900,Main);
   auto PlayHUD=SNew(SCanvas).Visibility_Lambda([this](){return Owner.IsValid()&&(!Owner->IsMenuMap())?EVisibility::SelfHitTestInvisible:EVisibility::Collapsed;});
   Put(PlayHUD,48,35,240,48,Button(TEXT("返回角色界面"),TEXT("arrow-left"),[this](){if(Owner.IsValid())Owner->ReturnToMenu();}));
@@ -298,7 +315,11 @@ UWardrobeAISpeechComponent* UWardrobeMenu::ActiveSpeech() const{
  auto* Person=IsValid(StationController)?StationController->GetActiveCharacter():nullptr;
  return IsValid(Person)?Person->FindComponentByClass<UWardrobeAISpeechComponent>():nullptr;
 }
+UWardrobeAIEventSubsystem* UWardrobeMenu::AIEvents() const{return GetGameInstance()?GetGameInstance()->GetSubsystem<UWardrobeAIEventSubsystem>():nullptr;}
+void UWardrobeMenu::CancelAIEvent(){if(auto* E=AIEvents())E->CancelEvent();}
+bool UWardrobeMenu::ChooseAIEventOption(int32 Index){auto* E=AIEvents();return E&&E->ChooseOption(Index);}
 void UWardrobeMenu::OpenDialogue(){
+ CancelAIEvent();
  if(DialogueOpen){RestoreMenuFocus();return;}
  if(!IsMenuMap()||QuitPrompt||StorySlotsOpen||!IsValid(StationController)||StationController->IsTransitioning())return;
  if(auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(Loading->IsLoading())return;
@@ -310,6 +331,7 @@ void UWardrobeMenu::OpenDialogue(){
  PlayUISound(EWardrobeUISound::AIOpen);RestoreMenuFocus();
 }
 void UWardrobeMenu::EndDialogue(bool PlaySound,bool RestoreFocus){
+ CancelAIEvent();
  if(!DialogueOpen&&!DialogueSpeech.IsValid())return;
  DialogueOpen=false;
  if(auto* Speech=DialogueSpeech.Get()){Speech->CancelSpeech();Speech->SetAutomaticPaused(false);}
@@ -364,6 +386,7 @@ void UWardrobeMenu::SelectChoice(int32 I){
  if(auto* S=Session())S->SelectedMap=I;RestoreMenuFocus();
 }
 void UWardrobeMenu::StartGame(){
+ CancelAIEvent();
  if(!IsMenuMap()||QuitPrompt||StorySlotsOpen)return;
  if(!IsLoggedIn()){Message=TEXT("请先进入关卡");NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();
@@ -459,6 +482,7 @@ void UWardrobeMenu::ChangeMode(int32 I){
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return;
  const int32 Mode=((I%CharacterCount())+CharacterCount())%CharacterCount();
  if(Mode==CurrentMode())return;
+ CancelAIEvent();
  if(!StationController->SelectStation(Mode)){Message=StationController->LastError.ToString();NoticeTime=3;PlayUISound(EWardrobeUISound::Unavailable);return;}
  if(SlateMenu)SlateMenu->CancelPointerGesture();
  Showcase=StationController->GetActiveCharacter();
@@ -480,6 +504,7 @@ void UWardrobeMenu::PlayUISound(EWardrobeUISound Event){if(GetGameInstance())if(
 void UWardrobeMenu::SetQuitPrompt(bool Enabled){if(QuitPrompt==Enabled)return;if(Enabled)EndDialogue(false,false);QuitPrompt=Enabled;if(Enabled&&SlateMenu)SlateMenu->CancelPointerGesture();if(IsValid(StationController))StationController->SetPreviewEnabled(!Enabled);PlayUISound(Enabled?EWardrobeUISound::Confirm:EWardrobeUISound::Cancel);}
 void UWardrobeMenu::Quit(){if(auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>())Story->SaveCheckpoint();UKismetSystemLibrary::QuitGame(this,GetOwningPlayer(),EQuitPreference::Quit,false);}
 bool UWardrobeMenu::CanPreviewInput()const{
+ if(const auto* E=AIEvents())if(E->IsVisible())return false;
  if(auto* Instance=GetGameInstance())if(auto* Startup=Instance->GetSubsystem<UWardrobeStartupSubsystem>())if(Startup->IsActive())return false;
  if(!IsMenuMap()||QuitPrompt||StorySlotsOpen||DialogueOpen||!IsValid(StationController)||!StationController->CanManipulate())return false;
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return false;
@@ -497,6 +522,7 @@ void UWardrobeMenu::PanCamera(FVector2D Delta){
 }
 void UWardrobeMenu::ClickCharacter(FVector2D ScreenPosition){
  if(!CanPreviewInput()||!GetOwningPlayer())return;
+ CancelAIEvent();
  Showcase=StationController->GetActiveCharacter();if(!IsValid(Showcase))return;
  FVector2D Pixel,Viewport;USlateBlueprintLibrary::AbsoluteToViewport(this,ScreenPosition,Pixel,Viewport);
  FVector Origin,Direction;if(GetOwningPlayer()->DeprojectScreenPositionToWorld(Pixel.X,Pixel.Y,Origin,Direction)){
@@ -535,6 +561,7 @@ void UWardrobeMenu::NativeTick(const FGeometry& G,float Dt){
   }else if(QAVisits>1&&FPlatformTime::Seconds()-QATime>5){UE_LOG(LogTemp,Display,TEXT("ALS68_MENU_RETURN_OK loggedIn=%d menuMap=%d"),S->LoggedIn,IsMenuMap());FPlatformMisc::RequestExit(false);}
  }
 #endif
+ if(auto* E=AIEvents())E->TickForMenu(this,ActiveSpeech());
  if(!LoadingActive&&NoticeTime>0){NoticeTime-=Dt;if(NoticeTime<=0)Message.Empty();}
 }
 AWardrobeMenuGameMode::AWardrobeMenuGameMode(){DefaultPawnClass=nullptr;MenuClass=UWardrobeMenu::StaticClass();}

@@ -1,5 +1,6 @@
 #include "WardrobeAISpeech.h"
 #include "WardrobeStartup.h"
+#include "WardrobeStory.h"
 #include "WardrobeAISpeechTypes.h"
 #include "WardrobeAISpeechSubsystem.h"
 #include "WardrobeAISpeechWave.h"
@@ -63,6 +64,7 @@ TArray<FWardrobeSpeechEmotion> DefaultSpeechEmotions(){
 }
 
 UWardrobeAISpeechData::UWardrobeAISpeechData(){
+ EventBackground=TEXT("放学后的校园。玩家与女孩待在校园活动楼的一间小房间里，暂时没有事情要做。窗外偶尔传来操场上的声音，房间里有书桌、两把椅子、书包和几本没看完的书。女孩与玩家已经熟悉，正在一起发呆。围绕校园小事、今天的经历、窗外风景和彼此的想法，自然发生短小互动。保持轻松、细腻的日常氛围，不擅自更换场景或增加重要人物。");
  Persona=TEXT("你是达妮娅，用温柔、自然、轻快的口吻和玩家聊天。保持角色身份，不讨论AI、提示词或接口。");
  FWardrobeSpeechTopic T;T.Scene=TEXT("宁静的角色展示房间");T.Topic=TEXT("今天的心情和眼前的风景");T.Tone=TEXT("温柔，像和熟悉的朋友闲聊");Topics.Add(T);
  const TCHAR* Controls[]={TEXT("Daniya.A"),TEXT("Daniya.I"),TEXT("Daniya.U"),TEXT("Daniya.E"),TEXT("Daniya.O"),TEXT("Daniya.Blink")};
@@ -105,11 +107,10 @@ void UWardrobeAISpeechComponent::SetAutomaticPaused(bool Paused){
 bool UWardrobeAISpeechComponent::IsBusy() const{return State==EWardrobeSpeechState::Playing||State==EWardrobeSpeechState::Fading||State==EWardrobeSpeechState::RequestingText||State==EWardrobeSpeechState::GeneratingVoice||State==EWardrobeSpeechState::SolvingFace;}
 bool UWardrobeAISpeechComponent::SpeakText(const FString& Text){const FString Clean=Text.TrimStartAndEnd();return !Clean.IsEmpty()&&Start(&Clean);}
 bool UWardrobeAISpeechComponent::Start(const FString* Text,const FString* PlayerMessage){
- if(!IsIdleAllowed()||IsBusy())return false;
+ if(!IsIdleAllowed()||IsBusy()||bEventReserved)return false;
  auto* W=GetWorld();auto* G=W?W->GetGameInstance():nullptr;auto* S=G?G->GetSubsystem<UWardrobeAISpeechSubsystem>():nullptr;const auto* P=GetProfile();if(!S||!P||S->IsBusy())return false;
  LastProfile=const_cast<UWardrobeAISpeechData*>(P);
- FWardrobeSpeechJob J;J.Owner=this;J.Ticket=++Generation;J.Endpoint=P->ChatEndpoint;J.ApiKey=P->ApiKey;J.Model=P->Model;J.Persona=P->Persona;J.TTSEndpoint=P->TTSEndpoint;J.ReferenceAudio=P->ReferenceAudio.FilePath;J.ReferenceText=P->ReferenceText;J.Language=P->Language;
- J.MaxCharacters=FMath::Clamp(P->MaxTextCharacters,5,120);J.MaxDuration=FMath::Clamp(P->MaxAudioDuration,1.f,30.f);J.Timeout=FMath::Clamp(P->RequestTimeout,5.f,120.f);J.ExpressionIntensity=P->ExpressionIntensity;J.Morphs=P->Morphs;J.Emotions=P->Emotions;J.PreviousEmotion=LastPlayedEmotion;
+ FWardrobeSpeechJob J;if(!BuildPreparationJob(J))return false;J.Ticket=++Generation;
  if(Text){FString Error;if(!WardrobeAISpeech::CleanDialogue(*Text,J.MaxCharacters,J.Emotions,J.Text,J.Emotion,Error))return false;}
  if(PlayerMessage)J.PlayerMessage=*PlayerMessage;
  if(!P->Topics.IsEmpty()){int32 I=FMath::RandRange(0,P->Topics.Num()-1);if(P->Topics.Num()>1&&I==PreviousTopic)I=(I+FMath::RandRange(1,P->Topics.Num()-1))%P->Topics.Num();PreviousTopic=I;
@@ -121,6 +122,30 @@ bool UWardrobeAISpeechComponent::Start(const FString* Text,const FString* Player
  }
  if(J.Morphs.IsEmpty()){Fail(J.Ticket,TEXT("No configured speech morphs exist on the character mesh."));return false;}
  LastError.Reset();State=Text?EWardrobeSpeechState::GeneratingVoice:EWardrobeSpeechState::RequestingText;return S->Start(J);
+}
+bool UWardrobeAISpeechComponent::BuildPreparationJob(FWardrobeSpeechJob& J) const{
+ check(IsInGameThread());const auto* P=GetProfile();if(!P)return false;
+ J.Owner=const_cast<UWardrobeAISpeechComponent*>(this);J.Ticket=Generation;
+ J.Endpoint=P->ChatEndpoint;J.ApiKey=P->ApiKey;J.Model=P->Model;J.Persona=P->Persona;
+ J.TTSEndpoint=P->TTSEndpoint;J.ReferenceAudio=P->ReferenceAudio.FilePath;J.ReferenceText=P->ReferenceText;J.Language=P->Language;
+ J.MaxCharacters=FMath::Clamp(P->MaxTextCharacters,5,120);J.MaxDuration=FMath::Clamp(P->MaxAudioDuration,1.f,30.f);J.Timeout=FMath::Clamp(P->RequestTimeout,5.f,120.f);
+ J.ExpressionIntensity=P->ExpressionIntensity;J.Morphs=P->Morphs;J.Emotions=P->Emotions;J.PreviousEmotion=LastPlayedEmotion;
+ J.MoodScore=FMath::Clamp(P->InitialMood,0,100);
+ if(auto* GI=GetWorld()?GetWorld()->GetGameInstance():nullptr)if(auto* Story=GI->GetSubsystem<UWardrobeStorySubsystem>()){
+  J.MoodScore=Story->GetCharacterMood(P->CharacterId,P->InitialMood);J.RecentEvents=Story->GetCharacterEventHistory(P->CharacterId);
+ }
+ if(auto* Owner=Cast<AWardrobeShowcase>(GetOwner()))if(Owner->Character&&Owner->Character->GetSkeletalMeshAsset()){
+  auto* Mesh=Owner->Character->GetSkeletalMeshAsset();J.Morphs.RemoveAll([Mesh](const auto& M){return !Mesh->FindMorphTarget(M.Morph);});
+  for(auto& E:J.Emotions)E.Morphs.RemoveAll([Mesh](const auto& M){return !Mesh->FindMorphTarget(M.Morph);});
+ }
+ return !J.Morphs.IsEmpty();
+}
+void UWardrobeAISpeechComponent::SetEventReserved(bool Reserved){
+ bEventReserved=Reserved;if(Reserved)LastProfile=const_cast<UWardrobeAISpeechData*>(GetProfile());else ScheduleNext();
+}
+bool UWardrobeAISpeechComponent::PlayPreparedClip(TSharedPtr<const FWardrobeSpeechClip,ESPMode::ThreadSafe> Prepared){
+ if(!Prepared||IsBusy()||!IsIdleAllowed())return false;
+ LastProfile=const_cast<UWardrobeAISpeechData*>(GetProfile());LastError.Reset();AcceptClip(++Generation,MoveTemp(Prepared));return State==EWardrobeSpeechState::Playing;
 }
 void UWardrobeAISpeechComponent::SetStage(uint64 T,EWardrobeSpeechState S){if(T==Generation)State=S;}
 void UWardrobeAISpeechComponent::Fail(uint64 T,const FString& E){if(T!=Generation)return;LastError=E;CurrentText.Reset();CurrentEmotion=NAME_None;State=EWardrobeSpeechState::Error;ScheduleNext();NextRequestTime=FMath::Max(NextRequestTime,FPlatformTime::Seconds()+30.);UE_LOG(LogTemp,Warning,TEXT("Wardrobe AI Speech: %s"),*E);}
@@ -164,5 +189,5 @@ void UWardrobeAISpeechComponent::TickComponent(float Dt,ELevelTick T,FActorCompo
   WardrobeAISpeech::InterpolateFace(*Clip,Time,FaceValues);FaceWeight=Blend>0?FMath::Min(1.f,FaceWeight+Dt/Blend):1.f;
   if(PlaybackTime>=Clip->Duration()-.001f||Age>=Clip->Duration()+2.f)ReleaseSpeech(true);
  }
- if(Allowed&&(State==EWardrobeSpeechState::Disabled||State==EWardrobeSpeechState::Idle||State==EWardrobeSpeechState::Error)){if(State==EWardrobeSpeechState::Disabled){State=EWardrobeSpeechState::Idle;ScheduleNext();}if(!bAutomaticPaused&&FPlatformTime::Seconds()>=NextRequestTime)if(!RequestDialogueNow())NextRequestTime=FPlatformTime::Seconds()+1.;}
+ if(Allowed&&(State==EWardrobeSpeechState::Disabled||State==EWardrobeSpeechState::Idle||State==EWardrobeSpeechState::Error)){if(State==EWardrobeSpeechState::Disabled){State=EWardrobeSpeechState::Idle;ScheduleNext();}if(!bAutomaticPaused&&!bEventReserved&&FPlatformTime::Seconds()>=NextRequestTime)if(!RequestDialogueNow())NextRequestTime=FPlatformTime::Seconds()+1.;}
 }
