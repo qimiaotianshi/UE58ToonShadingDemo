@@ -53,6 +53,16 @@ public:
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(DisplayName="API Key",PasswordField="true")) FString ApiKey;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue") FString Model=TEXT("deepseek-chat");
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(MultiLine="true")) FString Persona;
+ /** Shared factual setting for chat and events. Do not put credentials here. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",meta=(MultiLine="true",DisplayName="世界与关系背景")) FString WorldContext;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",meta=(MultiLine="true",DisplayName="说话习惯")) FString SpeakingStyle;
+ /** Use the project-local AstrBot service and its installed companion/memory plugins. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",meta=(DisplayName="使用 AstrBot 陪伴与记忆")) bool bUseAstrBot=false;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",meta=(DisplayName="记住对话")) bool bRememberConversations=true;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",AdvancedDisplay,meta=(ClampMin="4",ClampMax="32",EditCondition="bRememberConversations")) int32 RecentTurnLimit=12;
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Companion",AdvancedDisplay,meta=(ClampMin="8",ClampMax="64",EditCondition="bRememberConversations")) int32 MemoryNoteLimit=24;
+ /** Each unanswered automatic line lengthens the next interval, up to three steps. */
+ UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Timing",AdvancedDisplay,meta=(ClampMin="1",ClampMax="3")) float UnansweredCooldownScale=1.5f;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(TitleProperty="Topic")) TArray<FWardrobeSpeechTopic> Topics;
  UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Dialogue",meta=(ClampMin="5",ClampMax="120")) int32 MaxTextCharacters=60;
  /** Stable ID shared by outfits of the same character, and independent of actor tags. */
@@ -126,6 +136,7 @@ public:
  virtual void EndPlay(const EEndPlayReason::Type Reason) override;
  virtual void TickComponent(float Dt,ELevelTick Type,FActorComponentTickFunction* ThisTick) override;
 private:
+ friend class FWardrobeCompanionPlaybackTest;
  friend class FWardrobeSpeechPauseTest;
  friend class FWardrobeSpeechPresentationTest;
  void ReleaseSpeech(bool NaturalFinish);
@@ -141,7 +152,9 @@ private:
  uint64 Generation=0;
  double NextRequestTime=0,StartedAt=0;
  float FaceWeight=0,FadeAge=0,FadeFrom=0,PlaybackTime=0;
- int32 PreviousTopic=INDEX_NONE;
+ int32 PreviousTopic=INDEX_NONE,UnansweredLines=0;
+ uint64 LastCampaignRevision=MAX_uint64;
+ FName LastCharacterId;
  FName LastPlayedEmotion;
  bool bAutomaticPaused=false,bEventReserved=false;
 };

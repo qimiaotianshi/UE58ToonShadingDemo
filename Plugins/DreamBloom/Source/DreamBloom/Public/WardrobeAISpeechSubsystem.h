@@ -4,7 +4,7 @@
 #include "UObject/SoftObjectPtr.h"
 #include "WardrobeAISpeechSubsystem.generated.h"
 class UWardrobeAISpeechComponent;class UWardrobeAISpeechData;class UNNEModelData;
-struct FWardrobeSpeechJob;struct FWardrobeSpeechRequest;struct FWardrobeSpeechWorker;
+struct FWardrobeSpeechJob;struct FWardrobeSpeechRequest;struct FWardrobeSpeechWorker;struct FWardrobeSpeechClip;
 struct FStreamableHandle;
 
 /** One in-flight request per game instance. Lifetime pins survive cancellation and world travel. */
@@ -16,6 +16,7 @@ public:
  virtual void Initialize(FSubsystemCollectionBase& Collection) override;
  virtual void Deinitialize() override;
  bool Start(const FWardrobeSpeechJob& Job);
+ void CommitAstrBotClip(const FWardrobeSpeechClip& Clip);
  void Cancel(UWardrobeAISpeechComponent* Owner);
  UFUNCTION(BlueprintPure,Category="AI Speech") bool IsBusy() const;
  /** Configure before the startup movie warmup, from the selected character's DA. */
@@ -31,6 +32,10 @@ private:
  void Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,TArray<uint8> Bytes);
  void Finish(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,const FString& Error);
  void EnsureService(const UWardrobeAISpeechData* Profile);
+ void EnsureAstrBot(const UWardrobeAISpeechData* Profile);
+ void PumpAstrBotCommits();
+ TArray<FString> AstrBotCommits;
+ bool bAstrBotCommitPending=false,bAstrBotCheckPending=false;
  TWeakObjectPtr<UWardrobeAISpeechData> ServiceProfile;
  bool bServiceConfigured=false,bServiceCheckPending=false,bServiceStarted=false;
  TSharedPtr<FWardrobeSpeechRequest,ESPMode::ThreadSafe> Active;

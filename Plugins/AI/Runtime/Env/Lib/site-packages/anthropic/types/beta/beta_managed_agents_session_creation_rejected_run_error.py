@@ -1,0 +1,10 @@
+from .beta_managed_agents_session_creation_rejected_run_error_object import (
+    BetaManagedAgentsSessionCreationRejectedRunErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsSessionCreationRejectedRunError"]
+
+BetaManagedAgentsSessionCreationRejectedRunError = BetaManagedAgentsSessionCreationRejectedRunErrorObject
+"""
+Deprecated: BetaManagedAgentsSessionCreationRejectedRunError has been renamed to BetaManagedAgentsSessionCreationRejectedRunErrorObject
+"""

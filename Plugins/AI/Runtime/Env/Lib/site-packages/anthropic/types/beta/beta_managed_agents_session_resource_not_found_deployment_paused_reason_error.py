@@ -1,0 +1,12 @@
+from .beta_managed_agents_session_resource_not_found_deployment_paused_reason_error_object import (
+    BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonError"]
+
+BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonError = (
+    BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonError has been renamed to BetaManagedAgentsSessionResourceNotFoundDeploymentPausedReasonErrorObject
+"""

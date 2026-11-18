@@ -51,7 +51,7 @@ bool FWardrobeAIEventSaveTest::RunTest(const FString&){
  TestTrue(TEXT("Checkpoint queues behind choice"),Story->SaveCheckpoint());
  TestTrue(TEXT("Second choice updates latest snapshot"),Story->CommitCharacterChoice(TEXT("Daniya"),TEXT("two:B"),64,-2,60,TEXT("一起写作业")));
  Story->FlushPendingSaves();auto* Loaded=Cast<UWardrobeStorySave>(UGameplayStatics::LoadGameFromSlot(Slot,0));
- TestTrue(TEXT("Latest serialized update wins"),Loaded&&Loaded->CharacterMoods.FindRef(TEXT("Daniya")).Value==62&&Loaded->FormatVersion==2);
+ TestTrue(TEXT("Latest serialized update wins"),Loaded&&Loaded->CharacterMoods.FindRef(TEXT("Daniya")).Value==62&&Loaded->FormatVersion==3);
  TestTrue(TEXT("Mood commit and menu checkpoint preserve map, pose and story"),Loaded&&Loaded->Level==Level&&Loaded->PlayerTransform.Equals(Location)&&Loaded->CompletedStories.Contains(TEXT("Scene1"))&&Loaded->NextStoryId==TEXT("Scene2")&&Loaded->PlayerName==TEXT("测试旅人"));
  TestEqual(TEXT("Different stable character has independent default"),Story->GetCharacterMood(TEXT("Other"),45),45);
  TestFalse(TEXT("Stale prepared mood cannot overwrite newer state"),Story->CommitCharacterChoice(TEXT("Daniya"),TEXT("stale"),60,2,60,TEXT("stale")));

@@ -1,0 +1,8 @@
+from .beta_plugin_marketplace_validation_plugin_error_object import BetaPluginMarketplaceValidationPluginErrorObject
+
+__all__ = ["BetaPluginMarketplaceValidationPluginError"]
+
+BetaPluginMarketplaceValidationPluginError = BetaPluginMarketplaceValidationPluginErrorObject
+"""
+Deprecated: BetaPluginMarketplaceValidationPluginError has been renamed to BetaPluginMarketplaceValidationPluginErrorObject
+"""

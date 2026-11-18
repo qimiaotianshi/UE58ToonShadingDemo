@@ -10,6 +10,7 @@
 #include "Interfaces/IHttpResponse.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformProcess.h"
+#include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
@@ -51,7 +52,7 @@ void UWardrobeAISpeechSubsystem::ConfigureService(UWardrobeAISpeechData* Profile
  check(IsInGameThread());if(bEnding||!IsValid(Profile))return;
  const bool Changed=!bServiceConfigured||ServiceProfile.Get()!=Profile;
  ServiceProfile=Profile;bServiceConfigured=true;
- if(Changed)EnsureService(Profile);
+ if(Changed){EnsureService(Profile);EnsureAstrBot(Profile);}
 }
 FString UWardrobeAISpeechSubsystem::GetResolvedTTSRoot() const{
  const auto* Profile=ServiceProfile.Get();if(!Profile)return {};
@@ -65,6 +66,39 @@ void UWardrobeAISpeechSubsystem::Initialize(FSubsystemCollectionBase& C){
 void UWardrobeAISpeechSubsystem::Deinitialize(){
  bEnding=true;if(Active){Active->Cancelled.Store(true);if(Active->HTTP)Active->HTTP->CancelRequest();Active->HTTP.Reset();}
  if(LoadHandle)LoadHandle->CancelHandle();LoadHandle.Reset();Active.Reset();Worker.Reset();ServiceProfile.Reset();Super::Deinitialize();
+}
+void UWardrobeAISpeechSubsystem::EnsureAstrBot(const UWardrobeAISpeechData* Profile){
+ if(!Profile||!Profile->bEnabled||!Profile->bUseAstrBot||IsRunningCommandlet()||bAstrBotCheckPending)return;
+ const FString Root=FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(),TEXT("Plugins/AI")));
+ TArray<FString> Runtimes;IFileManager::Get().FindFiles(Runtimes,*FPaths::Combine(Root,TEXT("Runtime/Python/cpython-*")),false,true);
+ Runtimes.Sort([](const FString& A,const FString& B){return A.Len()>B.Len();});
+ if(Runtimes.IsEmpty()||!FPaths::FileExists(FPaths::Combine(Root,TEXT("StartAstrBot.py")))){UE_LOG(LogWardrobeAISpeech,Warning,TEXT("AstrBot runtime is missing. Install the companion tools in Project/Plugins/AI."));return;}
+ const FString Python=FPaths::Combine(Root,TEXT("Runtime/Python"),Runtimes[0],TEXT("python.exe"));
+ auto H=FHttpModule::Get().CreateRequest();H->SetURL(TEXT("http://127.0.0.1:6186/status"));H->SetVerb(TEXT("GET"));H->SetTimeout(2.f);bAstrBotCheckPending=true;
+ H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),Expected=TWeakObjectPtr<const UWardrobeAISpeechData>(Profile),Python,Root](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
+  if(!Weak.IsValid()||Weak->bEnding)return;Weak->bAstrBotCheckPending=false;
+  if(Weak->ServiceProfile.Get()!=Expected.Get())return;
+  if(OK&&Response)return;
+  const FString Args=TEXT("\"")+FPaths::Combine(Root,TEXT("StartAstrBot.py"))+TEXT("\"");
+  auto P=FPlatformProcess::CreateProc(*Python,*Args,true,true,true,nullptr,0,*Root,nullptr);
+  if(P.IsValid()){FPlatformProcess::CloseProc(P);UE_LOG(LogWardrobeAISpeech,Display,TEXT("Started project-local AstrBot asynchronously."));}
+  else UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Could not start AstrBot."));
+ });if(!H->ProcessRequest())bAstrBotCheckPending=false;
+}
+void UWardrobeAISpeechSubsystem::CommitAstrBotClip(const FWardrobeSpeechClip& Clip){
+ check(IsInGameThread());if(bEnding||Clip.AstrBotSession.IsEmpty()||Clip.AstrBotReceipt==TEXT("stored")||AstrBotCommits.Num()>=8)return;
+ auto O=MakeShared<FJsonObject>();O->SetStringField(TEXT("session"),Clip.AstrBotSession);O->SetStringField(TEXT("receipt"),Clip.AstrBotReceipt);O->SetStringField(TEXT("clip_id"),Clip.ClipId);
+ O->SetStringField(TEXT("player_name"),Clip.PlayerName);O->SetStringField(TEXT("player_text"),Clip.PlayerText);O->SetStringField(TEXT("text"),Clip.Text);
+ AstrBotCommits.Add(Encode(O));PumpAstrBotCommits();
+}
+void UWardrobeAISpeechSubsystem::PumpAstrBotCommits(){
+ if(bEnding||bAstrBotCommitPending||AstrBotCommits.IsEmpty())return;bAstrBotCommitPending=true;
+ auto H=FHttpModule::Get().CreateRequest();H->SetURL(TEXT("http://127.0.0.1:6186/commit"));H->SetVerb(TEXT("POST"));H->SetHeader(TEXT("Content-Type"),TEXT("application/json"));H->SetTimeout(120.f);H->SetContentAsString(AstrBotCommits[0]);
+ H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this)](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
+  auto* S=Weak.Get();if(!S||S->bEnding)return;S->bAstrBotCommitPending=false;if(!S->AstrBotCommits.IsEmpty())S->AstrBotCommits.RemoveAt(0);
+  if(!OK||!Response||Response->GetResponseCode()!=200)UE_LOG(LogWardrobeAISpeech,Warning,TEXT("AstrBot memory commit failed; native save remains available."));
+  S->PumpAstrBotCommits();
+ });if(!H->ProcessRequest()){bAstrBotCommitPending=false;AstrBotCommits.RemoveAt(0);}
 }
 bool UWardrobeAISpeechSubsystem::IsBusy() const{return Active.IsValid();}
 void UWardrobeAISpeechSubsystem::EnsureService(const UWardrobeAISpeechData* Profile){
@@ -156,7 +190,7 @@ void UWardrobeAISpeechSubsystem::RequestText(TSharedRef<FWardrobeSpeechRequest,E
    if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(UTF8(R->Body)),Envelope)||!Envelope||!Envelope->TryGetArrayField(TEXT("choices"),Choices)||Choices->IsEmpty()||!(*Choices)[0]->AsObject()||!(*Choices)[0]->AsObject()->TryGetObjectField(TEXT("message"),Message)||!(*Message)->TryGetStringField(TEXT("content"),R->Plan)||R->Plan.Len()>8000){S->Finish(R,TEXT("Invalid event plan response."));return;}
    S->Finish(R,TEXT(""));return;
   }
-  FString Error;if(!WardrobeAISpeech::ParseDialogue(UTF8(R->Body),R->Job.MaxCharacters,R->Job.Text,Error,&R->Job.Emotions,&R->Job.Emotion)){S->Finish(R,Error);return;}
+  FString Error;if(!WardrobeAISpeech::ParseCompanionReply(UTF8(R->Body),R->Job,Error)){S->Finish(R,Error);return;}
   R->HTTP.Reset();R->Body.Empty();S->RequestVoice(R);
  });if(!H->ProcessRequest())Finish(R,TEXT("Could not submit the chat request."));
 }
@@ -196,6 +230,10 @@ void UWardrobeAISpeechSubsystem::Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode
  const auto W=Worker;const auto Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this);
  Async(EAsyncExecution::ThreadPool,[Weak,W,R,Bytes=MoveTemp(Bytes)]()mutable{
   FString Error;auto Clip=MakeShared<FWardrobeSpeechClip,ESPMode::ThreadSafe>();Clip->Text=R->Job.Text;Clip->Emotion=R->Job.Emotion;
+  Clip->bRemember=R->Job.bRemember;Clip->CharacterId=R->Job.CharacterId;Clip->CampaignRevision=R->Job.CampaignRevision;
+  Clip->PlayerText=R->Job.PlayerMessage;Clip->VerifiedNotes=R->Job.VerifiedNotes;
+  Clip->AstrBotSession=R->Job.AstrBotSession;Clip->AstrBotReceipt=R->Job.AstrBotReceipt;Clip->PlayerName=R->Job.PlayerName;Clip->ClipId=FGuid::NewGuid().ToString(EGuidFormats::Digits);
+  Clip->RecentTurnLimit=R->Job.RecentTurnLimit;Clip->MemoryNoteLimit=R->Job.MemoryNoteLimit;
   const double Begin=FPlatformTime::Seconds();
   if(!R->Cancelled.Load()&&WardrobeAISpeech::DecodeWave(Bytes,R->Job.MaxDuration,Clip->PCM,Clip->SampleRate,Error)){
    Bytes.Empty();

@@ -1,0 +1,12 @@
+from .beta_managed_agents_memory_store_archived_deployment_paused_reason_error_object import (
+    BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonError"]
+
+BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonError = (
+    BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonError has been renamed to BetaManagedAgentsMemoryStoreArchivedDeploymentPausedReasonErrorObject
+"""

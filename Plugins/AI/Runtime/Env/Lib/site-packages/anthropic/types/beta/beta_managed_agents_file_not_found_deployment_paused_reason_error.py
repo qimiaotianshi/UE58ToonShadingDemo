@@ -1,0 +1,12 @@
+from .beta_managed_agents_file_not_found_deployment_paused_reason_error_object import (
+    BetaManagedAgentsFileNotFoundDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsFileNotFoundDeploymentPausedReasonError"]
+
+BetaManagedAgentsFileNotFoundDeploymentPausedReasonError = (
+    BetaManagedAgentsFileNotFoundDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsFileNotFoundDeploymentPausedReasonError has been renamed to BetaManagedAgentsFileNotFoundDeploymentPausedReasonErrorObject
+"""

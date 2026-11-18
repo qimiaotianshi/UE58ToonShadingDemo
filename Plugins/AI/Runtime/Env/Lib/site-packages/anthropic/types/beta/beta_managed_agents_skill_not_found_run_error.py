@@ -1,0 +1,8 @@
+from .beta_managed_agents_skill_not_found_run_error_object import BetaManagedAgentsSkillNotFoundRunErrorObject
+
+__all__ = ["BetaManagedAgentsSkillNotFoundRunError"]
+
+BetaManagedAgentsSkillNotFoundRunError = BetaManagedAgentsSkillNotFoundRunErrorObject
+"""
+Deprecated: BetaManagedAgentsSkillNotFoundRunError has been renamed to BetaManagedAgentsSkillNotFoundRunErrorObject
+"""

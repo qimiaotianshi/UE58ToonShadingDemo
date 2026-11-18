@@ -1,0 +1,12 @@
+from .beta_managed_agents_mcp_egress_blocked_deployment_paused_reason_error_object import (
+    BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonError"]
+
+BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonError = (
+    BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonError has been renamed to BetaManagedAgentsMCPEgressBlockedDeploymentPausedReasonErrorObject
+"""

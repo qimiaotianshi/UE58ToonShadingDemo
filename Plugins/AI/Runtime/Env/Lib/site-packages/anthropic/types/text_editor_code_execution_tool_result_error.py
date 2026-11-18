@@ -1,0 +1,8 @@
+from .text_editor_code_execution_tool_result_error_object import TextEditorCodeExecutionToolResultErrorObject
+
+__all__ = ["TextEditorCodeExecutionToolResultError"]
+
+TextEditorCodeExecutionToolResultError = TextEditorCodeExecutionToolResultErrorObject
+"""
+Deprecated: TextEditorCodeExecutionToolResultError has been renamed to TextEditorCodeExecutionToolResultErrorObject
+"""

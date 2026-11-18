@@ -1,5 +1,6 @@
 #pragma once
 #include "CoreMinimal.h"
+#include "WardrobeAICompanion.h"
 #include "Engine/DataAsset.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/SaveGame.h"
@@ -46,7 +47,9 @@ UCLASS()
 class DREAMBLOOM_API UWardrobeStorySave : public USaveGame {
  GENERATED_BODY()
 public:
- UPROPERTY(SaveGame) int32 FormatVersion=2;
+ UPROPERTY(SaveGame) int32 FormatVersion=3;
+ UPROPERTY(SaveGame) FGuid CompanionCampaignId;
+ UPROPERTY(SaveGame) TMap<FName,FWardrobeCompanionMemory> CompanionMemories;
  UPROPERTY(SaveGame) TMap<FName,FWardrobeCharacterMood> CharacterMoods;
  UPROPERTY(SaveGame) FString PlayerName;
  UPROPERTY(SaveGame) FString FlowPath;
@@ -118,6 +121,14 @@ public:
  FString SlotName(int32 Index) const;
  UFUNCTION(BlueprintPure,Category="AI Mood") int32 GetCharacterMood(FName CharacterId,int32 DefaultMood=60) const;
  FString GetCharacterEventHistory(FName CharacterId) const;
+ FString GetPlayerName() const;
+ FString GetCompanionSession(FName CharacterId);
+ UFUNCTION(BlueprintPure,Category="AI Memory") FString GetCompanionDialogueHistory(FName CharacterId) const;
+ UFUNCTION(BlueprintPure,Category="AI Memory") TArray<FString> GetCompanionRememberedNotes(FName CharacterId) const;
+ FWardrobeCompanionMemory GetCompanionMemory(FName CharacterId,int32 MaxTurns=12,int32 MaxNotes=24) const;
+ bool CommitCompanionDialogue(FName CharacterId,uint64 ExpectedRevision,const FString& PlayerText,const FString& Reply,FName Emotion,const TArray<FString>& VerifiedNotes,int32 MaxTurns,int32 MaxNotes);
+ /** Clears the UE snapshot only; external AstrBot memory is managed in its dashboard. */
+ UFUNCTION(BlueprintCallable,Category="AI Memory",meta=(DisplayName="清理 UE 对话快照")) bool ForgetCompanionMemory(FName CharacterId);
  /** Accepts a choice once; the queued disk snapshot keeps the existing story/location. */
  bool CommitCharacterChoice(FName CharacterId,const FString& ChoiceId,int32 ExpectedMood,int32 Delta,int32 DefaultMood,const FString& Summary);
  UFUNCTION(BlueprintPure,Category="Story") bool HasPendingSaves() const;
@@ -130,6 +141,8 @@ public:
  void AdvanceRuntime(float DeltaSeconds);
  ULevelSequencePlayer* GetStoryPlayer() const{return Player;}
 private:
+ friend class FWardrobeCompanionSaveTest;
+ friend class FWardrobeCompanionPlaybackTest;
  friend class FWardrobeAIEventSaveTest;
  friend class FWardrobeAIEventChoiceTest;
  friend class FWardrobeStoryRuntimeTest;

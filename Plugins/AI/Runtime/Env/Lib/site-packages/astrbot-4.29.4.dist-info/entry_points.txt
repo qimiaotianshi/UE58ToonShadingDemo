@@ -1,0 +1,2 @@
+[console_scripts]
+astrbot = astrbot.cli.__main__:cli

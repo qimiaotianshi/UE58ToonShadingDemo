@@ -1,0 +1,8 @@
+from .beta_browser_left_click_drag_tool_use_block import BetaBrowserLeftClickDragToolUseBlock
+
+__all__ = ["BetaResponseBrowserLeftClickDragToolUseBlock"]
+
+BetaResponseBrowserLeftClickDragToolUseBlock = BetaBrowserLeftClickDragToolUseBlock
+"""
+Deprecated: BetaResponseBrowserLeftClickDragToolUseBlock has been renamed to BetaBrowserLeftClickDragToolUseBlock
+"""

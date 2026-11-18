@@ -1,0 +1,10 @@
+from .beta_managed_agents_self_hosted_resources_unsupported_run_error_object import (
+    BetaManagedAgentsSelfHostedResourcesUnsupportedRunErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsSelfHostedResourcesUnsupportedRunError"]
+
+BetaManagedAgentsSelfHostedResourcesUnsupportedRunError = BetaManagedAgentsSelfHostedResourcesUnsupportedRunErrorObject
+"""
+Deprecated: BetaManagedAgentsSelfHostedResourcesUnsupportedRunError has been renamed to BetaManagedAgentsSelfHostedResourcesUnsupportedRunErrorObject
+"""

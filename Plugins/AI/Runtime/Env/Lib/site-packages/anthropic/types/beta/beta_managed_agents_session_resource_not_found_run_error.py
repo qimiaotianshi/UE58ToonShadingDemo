@@ -1,0 +1,10 @@
+from .beta_managed_agents_session_resource_not_found_run_error_object import (
+    BetaManagedAgentsSessionResourceNotFoundRunErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsSessionResourceNotFoundRunError"]
+
+BetaManagedAgentsSessionResourceNotFoundRunError = BetaManagedAgentsSessionResourceNotFoundRunErrorObject
+"""
+Deprecated: BetaManagedAgentsSessionResourceNotFoundRunError has been renamed to BetaManagedAgentsSessionResourceNotFoundRunErrorObject
+"""

@@ -1,0 +1,12 @@
+from .beta_managed_agents_vault_not_found_deployment_paused_reason_error_object import (
+    BetaManagedAgentsVaultNotFoundDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsVaultNotFoundDeploymentPausedReasonError"]
+
+BetaManagedAgentsVaultNotFoundDeploymentPausedReasonError = (
+    BetaManagedAgentsVaultNotFoundDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsVaultNotFoundDeploymentPausedReasonError has been renamed to BetaManagedAgentsVaultNotFoundDeploymentPausedReasonErrorObject
+"""

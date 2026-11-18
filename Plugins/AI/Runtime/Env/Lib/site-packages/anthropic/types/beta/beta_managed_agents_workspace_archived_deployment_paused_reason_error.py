@@ -1,0 +1,12 @@
+from .beta_managed_agents_workspace_archived_deployment_paused_reason_error_object import (
+    BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonError"]
+
+BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonError = (
+    BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonError has been renamed to BetaManagedAgentsWorkspaceArchivedDeploymentPausedReasonErrorObject
+"""

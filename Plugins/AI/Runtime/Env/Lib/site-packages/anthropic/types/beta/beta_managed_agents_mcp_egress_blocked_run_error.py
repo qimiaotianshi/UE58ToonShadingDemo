@@ -1,0 +1,8 @@
+from .beta_managed_agents_mcp_egress_blocked_run_error_object import BetaManagedAgentsMCPEgressBlockedRunErrorObject
+
+__all__ = ["BetaManagedAgentsMCPEgressBlockedRunError"]
+
+BetaManagedAgentsMCPEgressBlockedRunError = BetaManagedAgentsMCPEgressBlockedRunErrorObject
+"""
+Deprecated: BetaManagedAgentsMCPEgressBlockedRunError has been renamed to BetaManagedAgentsMCPEgressBlockedRunErrorObject
+"""

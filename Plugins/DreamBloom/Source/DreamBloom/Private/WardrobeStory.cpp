@@ -150,7 +150,7 @@ int32 UWardrobeStorySubsystem::CurrentStepIndex() const {
 }
 FName UWardrobeStorySubsystem::GetCurrentStoryId() const {return Save&&!Save->bStoryComplete?Save->NextStoryId:NAME_None;}
 bool UWardrobeStorySubsystem::IsSaveUsable(const UWardrobeStorySave* Candidate) const{
- if(!Candidate||!Flow||(Candidate->FormatVersion<1||Candidate->FormatVersion>2)||Candidate->FlowPath!=Flow->GetPathName()||Candidate->Level.IsNull()||!FPackageName::DoesPackageExist(Candidate->Level.ToSoftObjectPath().GetLongPackageName()))return false;
+ if(!Candidate||!Flow||(Candidate->FormatVersion<1||Candidate->FormatVersion>3)||Candidate->FlowPath!=Flow->GetPathName()||Candidate->Level.IsNull()||!FPackageName::DoesPackageExist(Candidate->Level.ToSoftObjectPath().GetLongPackageName()))return false;
  if(Candidate->bHasPlayerTransform&&(Candidate->PlayerTransform.ContainsNaN()||!Candidate->PlayerTransform.GetRotation().IsNormalized()||Candidate->ControlRotation.ContainsNaN()))return false;
  return Candidate->bStoryComplete||Flow->Steps.ContainsByPredicate([Candidate](const FWardrobeStoryStep& Step){return Step.StoryId==Candidate->NextStoryId;});
 }
@@ -183,7 +183,7 @@ bool UWardrobeStorySubsystem::StartNewGame(int32 Slot,const FString& Name,UWardr
  if(!MapReady(Initial)){Initial=INDEX_NONE;for(int32 I=0;Menu&&I<Menu->Levels.Num();++I)if(MapReady(I)){Initial=I;break;}}
  if(Initial==INDEX_NONE){LastError=StoryText(TEXT("请先在菜单 Levels 中配置至少一张有效地图"));return false;}
  auto* Candidate=NewObject<UWardrobeStorySave>(this);Candidate->FlowPath=Flow->GetPathName();Candidate->PlayerName=Name.TrimStartAndEnd().Left(16);if(Candidate->PlayerName.IsEmpty())Candidate->PlayerName=TEXT("旅人");
- Candidate->NextStoryId=Flow->Steps[0].StoryId;Candidate->Level=Menu->Levels[Initial].Level;Candidate->MenuData=Menu;Candidate->ReturnLevel=StoryWorldAsset(GetWorld());
+ Candidate->CompanionCampaignId=FGuid::NewGuid();Candidate->NextStoryId=Flow->Steps[0].StoryId;Candidate->Level=Menu->Levels[Initial].Level;Candidate->MenuData=Menu;Candidate->ReturnLevel=StoryWorldAsset(GetWorld());
  Candidate->SavedAt=FDateTime::UtcNow();if(!UGameplayStatics::SaveGameToSlot(Candidate,SlotName(Slot),0)){LastError=StoryText(TEXT("新存档写入失败，请检查存档目录"));UE_LOG(LogTemp,Warning,TEXT("WARDROBE_STORY_SAVE_FAILED"));return false;}
  ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;ObservedWorld.Reset();LastError=FText::GetEmpty();
  if(Session){Session->Name=Candidate->PlayerName;Session->LoggedIn=true;Session->SelectedMap=Initial;Session->ExplorationMenuData=Menu;Session->ExplorationReturnLevel=Candidate->ReturnLevel;}
@@ -214,7 +214,7 @@ bool UWardrobeStorySubsystem::SaveCheckpoint(){
 bool UWardrobeStorySubsystem::HasPendingSaves() const{return SaveTask.IsValid()||!PendingSaves.IsEmpty();}
 bool UWardrobeStorySubsystem::QueueSaveSnapshot(){
  check(IsInGameThread());if(!Save||!Flow||ActiveSlot==INDEX_NONE)return false;
- TArray<uint8> Bytes;Save->FormatVersion=2;if(!UGameplayStatics::SaveGameToMemory(Save,Bytes))return false;
+ TArray<uint8> Bytes;Save->FormatVersion=3;if(!UGameplayStatics::SaveGameToMemory(Save,Bytes))return false;
  PendingSaves.Add(SlotName(ActiveSlot),MoveTemp(Bytes));PumpSaves();return true;
 }
 void UWardrobeStorySubsystem::PumpSaves(){
@@ -236,6 +236,35 @@ int32 UWardrobeStorySubsystem::GetCharacterMood(FName Id,int32 DefaultMood) cons
 }
 FString UWardrobeStorySubsystem::GetCharacterEventHistory(FName Id) const{
  const auto* M=Save?Save->CharacterMoods.Find(Id):nullptr;return M?FString::Join(M->RecentEvents,TEXT("\n")):FString();
+}
+FString UWardrobeStorySubsystem::GetPlayerName() const{return Save?Save->PlayerName.Left(16):FString();}
+FString UWardrobeStorySubsystem::GetCompanionSession(FName Id){
+ check(IsInGameThread());if(!Save||Id.IsNone())return {};
+ if(!Save->CompanionCampaignId.IsValid()){Save->CompanionCampaignId=FGuid::NewGuid();QueueSaveSnapshot();}
+ return Save->CompanionCampaignId.ToString(EGuidFormats::Digits)+TEXT("-")+Id.ToString().ToLower().Left(64);
+}
+FString UWardrobeStorySubsystem::GetCompanionDialogueHistory(FName Id) const{return WardrobeAICompanion::DescribeRecent(GetCompanionMemory(Id));}
+TArray<FString> UWardrobeStorySubsystem::GetCompanionRememberedNotes(FName Id) const{return GetCompanionMemory(Id).Notes;}
+FWardrobeCompanionMemory UWardrobeStorySubsystem::GetCompanionMemory(FName Id,int32 Turns,int32 Notes) const{
+ check(IsInGameThread());const auto* Found=Save?Save->CompanionMemories.Find(Id):nullptr;
+ FWardrobeCompanionMemory M=Found?*Found:FWardrobeCompanionMemory();WardrobeAICompanion::BoundMemory(M,Turns,Notes);return M;
+}
+bool UWardrobeStorySubsystem::CommitCompanionDialogue(FName Id,uint64 Revision,const FString& User,const FString& Reply,FName Emotion,const TArray<FString>& Notes,int32 Turns,int32 NoteLimit){
+ check(IsInGameThread());if(!Save||!Flow||ActiveSlot==INDEX_NONE||Id.IsNone()||Revision!=CampaignRevision||Reply.TrimStartAndEnd().IsEmpty()||Reply.Len()>120||User.Len()>500)return false;
+ const auto* Old=Save->CompanionMemories.Find(Id);const bool Had=Old!=nullptr;const FWardrobeCompanionMemory Before=Had?*Old:FWardrobeCompanionMemory();
+ auto& M=Save->CompanionMemories.FindOrAdd(Id);
+ if(!User.IsEmpty()){FWardrobeCompanionTurn T;T.bPlayer=true;T.Text=User;M.Turns.Add(MoveTemp(T));}
+ FWardrobeCompanionTurn T;T.Text=Reply;T.Emotion=Emotion;M.Turns.Add(MoveTemp(T));
+ for(const auto& N:Notes)if(N.Len()>=2&&N.Len()<=120&&!User.IsEmpty()&&User.Contains(N,ESearchCase::CaseSensitive)){
+  M.Notes.Remove(N);M.Notes.Add(N); // Same evidence moves to the most recent position.
+ }
+ M.LastSpokenAt=FDateTime::UtcNow();WardrobeAICompanion::BoundMemory(M,Turns,NoteLimit);Save->SavedAt=M.LastSpokenAt;
+ if(QueueSaveSnapshot())return true;if(Had)Save->CompanionMemories.Add(Id,Before);else Save->CompanionMemories.Remove(Id);return false;
+}
+bool UWardrobeStorySubsystem::ForgetCompanionMemory(FName Id){
+ check(IsInGameThread());if(!Save||!Save->CompanionMemories.Contains(Id))return false;
+ const auto Before=Save->CompanionMemories.FindChecked(Id);Save->CompanionMemories.Remove(Id);
+ if(QueueSaveSnapshot())return true;Save->CompanionMemories.Add(Id,Before);return false;
 }
 bool UWardrobeStorySubsystem::CommitCharacterChoice(FName Id,const FString& Choice,int32 Expected,int32 Delta,int32 DefaultMood,const FString& Summary){
  check(IsInGameThread());if(!Save||!Flow||ActiveSlot==INDEX_NONE||Id.IsNone()||Choice.IsEmpty()||Choice.Len()>100||GetCharacterMood(Id,DefaultMood)!=Expected)return false;

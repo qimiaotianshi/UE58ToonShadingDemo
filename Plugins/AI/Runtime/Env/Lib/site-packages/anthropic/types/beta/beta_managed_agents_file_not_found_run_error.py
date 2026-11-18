@@ -1,0 +1,8 @@
+from .beta_managed_agents_file_not_found_run_error_object import BetaManagedAgentsFileNotFoundRunErrorObject
+
+__all__ = ["BetaManagedAgentsFileNotFoundRunError"]
+
+BetaManagedAgentsFileNotFoundRunError = BetaManagedAgentsFileNotFoundRunErrorObject
+"""
+Deprecated: BetaManagedAgentsFileNotFoundRunError has been renamed to BetaManagedAgentsFileNotFoundRunErrorObject
+"""

@@ -1,0 +1,8 @@
+from .beta_managed_agents_vault_not_found_run_error_object import BetaManagedAgentsVaultNotFoundRunErrorObject
+
+__all__ = ["BetaManagedAgentsVaultNotFoundRunError"]
+
+BetaManagedAgentsVaultNotFoundRunError = BetaManagedAgentsVaultNotFoundRunErrorObject
+"""
+Deprecated: BetaManagedAgentsVaultNotFoundRunError has been renamed to BetaManagedAgentsVaultNotFoundRunErrorObject
+"""

@@ -1,0 +1,12 @@
+from .beta_managed_agents_self_hosted_resources_unsupported_deployment_paused_reason_error_object import (
+    BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonErrorObject,
+)
+
+__all__ = ["BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonError"]
+
+BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonError = (
+    BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonErrorObject
+)
+"""
+Deprecated: BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonError has been renamed to BetaManagedAgentsSelfHostedResourcesUnsupportedDeploymentPausedReasonErrorObject
+"""

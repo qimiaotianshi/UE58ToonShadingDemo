@@ -1,0 +1,8 @@
+from .beta_managed_agents_agent_archived_run_error_object import BetaManagedAgentsAgentArchivedRunErrorObject
+
+__all__ = ["BetaManagedAgentsAgentArchivedRunError"]
+
+BetaManagedAgentsAgentArchivedRunError = BetaManagedAgentsAgentArchivedRunErrorObject
+"""
+Deprecated: BetaManagedAgentsAgentArchivedRunError has been renamed to BetaManagedAgentsAgentArchivedRunErrorObject
+"""

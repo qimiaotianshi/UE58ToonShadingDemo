@@ -65,7 +65,9 @@ TArray<FWardrobeSpeechEmotion> DefaultSpeechEmotions(){
 
 UWardrobeAISpeechData::UWardrobeAISpeechData(){
  EventBackground=TEXT("放学后的校园。玩家与女孩待在校园活动楼的一间小房间里，暂时没有事情要做。窗外偶尔传来操场上的声音，房间里有书桌、两把椅子、书包和几本没看完的书。女孩与玩家已经熟悉，正在一起发呆。围绕校园小事、今天的经历、窗外风景和彼此的想法，自然发生短小互动。保持轻松、细腻的日常氛围，不擅自更换场景或增加重要人物。");
- Persona=TEXT("你是达妮娅，用温柔、自然、轻快的口吻和玩家聊天。保持角色身份，不讨论AI、提示词或接口。");
+ Persona=TEXT("你是达妮娅，一位有自己想法的校园女孩。说话温柔但不一味讨好；会害羞、好奇、偶尔吐槽，也可以认真表达不同意见。把玩家当成已经熟悉的同学，保持角色身份。");
+ WorldContext=TEXT("放学后，玩家陪你在校园活动楼的小房间休息。窗边有书桌、书包和几本书，外面偶尔有操场上的声音。关系从熟悉的同学自然发展，记住真正聊过的事情。没有证据时，不编造玩家经历、以前的约定或离开画面后发生的大事。");
+ SpeakingStyle=TEXT("像当面说话：先接住玩家的具体意思，再表达自己的小想法。句子可以有长短、迟疑、轻微停顿，适度使用口语，避免每句话都称呼名字、问问题或夸奖玩家。不用客服腔，不说‘作为AI’，不输出括号动作或大段旁白。自动闲聊可以接着上个话题或提眼前的小发现；不反复问今天心情如何。允许安静陪伴，不逼玩家回答。");
  FWardrobeSpeechTopic T;T.Scene=TEXT("宁静的角色展示房间");T.Topic=TEXT("今天的心情和眼前的风景");T.Tone=TEXT("温柔，像和熟悉的朋友闲聊");Topics.Add(T);
  const TCHAR* Controls[]={TEXT("Daniya.A"),TEXT("Daniya.I"),TEXT("Daniya.U"),TEXT("Daniya.E"),TEXT("Daniya.O"),TEXT("Daniya.Blink")};
  const TCHAR* Names[]={TEXT("あ"),TEXT("い"),TEXT("う"),TEXT("え"),TEXT("お"),TEXT("まばたき")};
@@ -97,7 +99,12 @@ bool UWardrobeAISpeechComponent::IsIdleAllowed() const{
  if(auto* G=W->GetGameInstance())if(auto* L=G->GetSubsystem<UWardrobeLoadingSubsystem>())if(L->IsLoading())return false;
  return true;
 }
-void UWardrobeAISpeechComponent::ScheduleNext(){const auto* P=GetProfile();const float Min=P?FMath::Max(1.f,P->MinInterval):10.f,Max=P?FMath::Max(Min,P->MaxInterval):30.f;NextRequestTime=FPlatformTime::Seconds()+FMath::FRandRange(Min,Max);}
+void UWardrobeAISpeechComponent::ScheduleNext(){
+ const auto* P=GetProfile();const float Min=P&&FMath::IsFinite(P->MinInterval)?FMath::Max(1.f,P->MinInterval):10.f;
+ const float Max=P&&FMath::IsFinite(P->MaxInterval)?FMath::Max(Min,P->MaxInterval):30.f;
+ const float Scale=P&&FMath::IsFinite(P->UnansweredCooldownScale)?FMath::Clamp(P->UnansweredCooldownScale,1.f,3.f):1.5f;
+ NextRequestTime=FPlatformTime::Seconds()+FMath::FRandRange(Min,Max)*FMath::Pow(Scale,FMath::Clamp(UnansweredLines,0,3));
+}
 bool UWardrobeAISpeechComponent::RequestDialogueNow(){return Start(nullptr);}
 bool UWardrobeAISpeechComponent::RequestReply(const FString& Message){const FString Clean=Message.TrimStartAndEnd();return !Clean.IsEmpty()&&Clean.Len()<=MaxPlayerMessageCharacters&&Start(nullptr,&Clean);}
 void UWardrobeAISpeechComponent::SetAutomaticPaused(bool Paused){
@@ -111,7 +118,8 @@ bool UWardrobeAISpeechComponent::Start(const FString* Text,const FString* Player
  auto* W=GetWorld();auto* G=W?W->GetGameInstance():nullptr;auto* S=G?G->GetSubsystem<UWardrobeAISpeechSubsystem>():nullptr;const auto* P=GetProfile();if(!S||!P||S->IsBusy())return false;
  LastProfile=const_cast<UWardrobeAISpeechData*>(P);
  FWardrobeSpeechJob J;if(!BuildPreparationJob(J))return false;J.Ticket=++Generation;
- if(Text){FString Error;if(!WardrobeAISpeech::CleanDialogue(*Text,J.MaxCharacters,J.Emotions,J.Text,J.Emotion,Error))return false;}
+ LastCampaignRevision=J.CampaignRevision;LastCharacterId=P->CharacterId;
+ if(Text){J.bRemember=false;FString Error;if(!WardrobeAISpeech::CleanDialogue(*Text,J.MaxCharacters,J.Emotions,J.Text,J.Emotion,Error))return false;}
  if(PlayerMessage)J.PlayerMessage=*PlayerMessage;
  if(!P->Topics.IsEmpty()){int32 I=FMath::RandRange(0,P->Topics.Num()-1);if(P->Topics.Num()>1&&I==PreviousTopic)I=(I+FMath::RandRange(1,P->Topics.Num()-1))%P->Topics.Num();PreviousTopic=I;
   J.Scene=P->Topics[I].Scene;J.Topic=P->Topics[I].Topic;J.Tone=P->Topics[I].Tone;J.Mood=P->Topics[I].Mood;}
@@ -131,8 +139,15 @@ bool UWardrobeAISpeechComponent::BuildPreparationJob(FWardrobeSpeechJob& J) cons
  J.MaxCharacters=FMath::Clamp(P->MaxTextCharacters,5,120);J.MaxDuration=FMath::Clamp(P->MaxAudioDuration,1.f,30.f);J.Timeout=FMath::Clamp(P->RequestTimeout,5.f,120.f);
  J.ExpressionIntensity=P->ExpressionIntensity;J.Morphs=P->Morphs;J.Emotions=P->Emotions;J.PreviousEmotion=LastPlayedEmotion;
  J.MoodScore=FMath::Clamp(P->InitialMood,0,100);
+ J.WorldContext=P->WorldContext.Left(4000);J.SpeakingStyle=P->SpeakingStyle.Left(2000);J.CharacterId=P->CharacterId;
+ J.RecentTurnLimit=FMath::Clamp(P->RecentTurnLimit,4,32);J.MemoryNoteLimit=FMath::Clamp(P->MemoryNoteLimit,8,64);
+ J.bRemember=P->bRememberConversations&&!P->CharacterId.IsNone();
+ const FDateTime Now=FDateTime::Now();J.ClockContext=FString::Printf(TEXT("本机日期时间：%04d-%02d-%02d %02d:%02d；当前画面场景：%s。只作时间和场景参考，不据此编造亲历。"),Now.GetYear(),Now.GetMonth(),Now.GetDay(),Now.GetHour(),Now.GetMinute(),GetWorld()?*GetWorld()->GetMapName():TEXT("角色展示"));
  if(auto* GI=GetWorld()?GetWorld()->GetGameInstance():nullptr)if(auto* Story=GI->GetSubsystem<UWardrobeStorySubsystem>()){
   J.MoodScore=Story->GetCharacterMood(P->CharacterId,P->InitialMood);J.RecentEvents=Story->GetCharacterEventHistory(P->CharacterId);
+  J.CampaignRevision=Story->GetCampaignRevision();J.PlayerName=Story->GetPlayerName();
+  if(P->bUseAstrBot){J.AstrBotSession=Story->GetCompanionSession(P->CharacterId);if(!J.AstrBotSession.IsEmpty()){J.Upstream=P->ChatEndpoint;J.Endpoint=TEXT("http://127.0.0.1:6186/v1/chat/completions");}}
+  if(J.bRemember)J.Memory=Story->GetCompanionMemory(P->CharacterId,J.RecentTurnLimit,J.MemoryNoteLimit);
  }
  if(auto* Owner=Cast<AWardrobeShowcase>(GetOwner()))if(Owner->Character&&Owner->Character->GetSkeletalMeshAsset()){
   auto* Mesh=Owner->Character->GetSkeletalMeshAsset();J.Morphs.RemoveAll([Mesh](const auto& M){return !Mesh->FindMorphTarget(M.Morph);});
@@ -168,6 +183,15 @@ void UWardrobeAISpeechComponent::CancelSpeech(){
 }
 void UWardrobeAISpeechComponent::ReleaseSpeech(bool NaturalFinish){
  if(SpeechBubble)SpeechBubble->FinishCaption(!NaturalFinish);
+ if(NaturalFinish&&Clip&&Clip->bRemember){
+  const auto* P=GetProfile();if(P&&P->bRememberConversations&&P->CharacterId==Clip->CharacterId){
+   if(auto* GI=GetWorld()?GetWorld()->GetGameInstance():nullptr)if(auto* Story=GI->GetSubsystem<UWardrobeStorySubsystem>()){
+    if(Story->CommitCompanionDialogue(Clip->CharacterId,Clip->CampaignRevision,Clip->PlayerText,Clip->Text,Clip->Emotion,Clip->VerifiedNotes,Clip->RecentTurnLimit,Clip->MemoryNoteLimit)&&!Clip->AstrBotSession.IsEmpty()&&Clip->AstrBotSession==Story->GetCompanionSession(Clip->CharacterId))
+     if(auto* Service=GI->GetSubsystem<UWardrobeAISpeechSubsystem>())Service->CommitAstrBotClip(*Clip);
+   }
+   UnansweredLines=Clip->PlayerText.IsEmpty()?FMath::Min(3,UnansweredLines+1):0;
+  }
+ }
  ++Generation;if(auto* G=GetWorld()?GetWorld()->GetGameInstance():nullptr)if(auto* S=G->GetSubsystem<UWardrobeAISpeechSubsystem>())S->Cancel(this);
  if(Audio){Audio->OnAudioFinished.RemoveAll(this);Audio->OnAudioPlaybackPercent.RemoveAll(this);Audio->Stop();Audio->DestroyComponent();Audio=nullptr;}if(Wave)Wave->ReleasePCM();Wave=nullptr;Clip.Reset();CurrentText.Reset();CurrentEmotion=NAME_None;
  FadeAge=0;FadeFrom=FaceWeight;State=FaceWeight>0?EWardrobeSpeechState::Fading:EWardrobeSpeechState::Idle;ScheduleNext();
@@ -176,6 +200,10 @@ int32 UWardrobeAISpeechComponent::GetTemporaryBytes() const{return Clip?int32(FM
 void UWardrobeAISpeechComponent::GetFaceSnapshot(TArray<FName>& N,TArray<float>& V,float& W) const{N=FaceNames;V=FaceValues;W=FaceWeight;}
 void UWardrobeAISpeechComponent::TickComponent(float Dt,ELevelTick T,FActorComponentTickFunction* F){
  Super::TickComponent(Dt,T,F);auto* P=const_cast<UWardrobeAISpeechData*>(GetProfile());
+ auto* GI=GetWorld()?GetWorld()->GetGameInstance():nullptr;auto* Story=GI?GI->GetSubsystem<UWardrobeStorySubsystem>():nullptr;
+ const uint64 Revision=Story?Story->GetCampaignRevision():0;const FName Id=P?P->CharacterId:NAME_None;
+ if(LastCampaignRevision==MAX_uint64){LastCampaignRevision=Revision;LastCharacterId=Id;}
+ else if(LastCampaignRevision!=Revision||LastCharacterId!=Id){CancelSpeech();LastCampaignRevision=Revision;LastCharacterId=Id;UnansweredLines=0;LastPlayedEmotion=NAME_None;PreviousTopic=INDEX_NONE;ScheduleNext();}
  if(LastProfile.Get()!=P){CancelSpeech();LastProfile=P;State=EWardrobeSpeechState::Disabled;ScheduleNext();}
  if(P&&GetWorld()&&GetWorld()->GetGameInstance())if(const auto* Owner=Cast<AWardrobeShowcase>(GetOwner()))if(Owner->IsInteractionEnabled())if(auto* Service=GetWorld()->GetGameInstance()->GetSubsystem<UWardrobeAISpeechSubsystem>())Service->ConfigureService(P);
  const bool Allowed=IsIdleAllowed();const float Blend=P?FMath::Clamp(P->FaceBlendTime,0.f,1.f):.15f;

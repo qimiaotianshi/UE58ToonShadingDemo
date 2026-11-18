@@ -1,0 +1,8 @@
+from .beta_managed_agents_session_rate_limited_run_error_object import BetaManagedAgentsSessionRateLimitedRunErrorObject
+
+__all__ = ["BetaManagedAgentsSessionRateLimitedRunError"]
+
+BetaManagedAgentsSessionRateLimitedRunError = BetaManagedAgentsSessionRateLimitedRunErrorObject
+"""
+Deprecated: BetaManagedAgentsSessionRateLimitedRunError has been renamed to BetaManagedAgentsSessionRateLimitedRunErrorObject
+"""

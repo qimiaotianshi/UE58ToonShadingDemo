@@ -1,0 +1,39 @@
+{
+  "multi_host": {
+    "enabled": true,
+    "installation_id": "wardrobe-companion",
+    "targets": [
+      {
+        "__template_key": "private_target",
+        "target_id": "wardrobe-local-player",
+        "platform_id": "wardrobe_ue",
+        "account_id": "800000001",
+        "bot_id": "Daniya",
+        "participant_id": "*"
+      }
+    ],
+    "personas": [
+      {
+        "__template_key": "persona_mapping",
+        "bot_id": "Daniya",
+        "persona_id": "[%None]",
+        "role_id": "Daniya"
+      }
+    ],
+    "group_targets": [],
+    "capabilities": [
+      "text",
+      "conversation.reply",
+      "configuration.read",
+      "memory.read",
+      "memory.propose",
+      "memory.reflect",
+      "memory.subscribe",
+      "role.life.read",
+      "role.growth.read"
+    ]
+  },
+  "model": {
+    "provider_id": "wardrobe_deepseek"
+  }
+}

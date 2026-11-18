@@ -1,0 +1,8 @@
+from .beta_text_editor_code_execution_tool_result_error_object import BetaTextEditorCodeExecutionToolResultErrorObject
+
+__all__ = ["BetaTextEditorCodeExecutionToolResultError"]
+
+BetaTextEditorCodeExecutionToolResultError = BetaTextEditorCodeExecutionToolResultErrorObject
+"""
+Deprecated: BetaTextEditorCodeExecutionToolResultError has been renamed to BetaTextEditorCodeExecutionToolResultErrorObject
+"""

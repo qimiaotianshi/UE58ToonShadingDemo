@@ -12,7 +12,7 @@ enum class EWardrobeAIEventState:uint8 {Waiting,Fetching,Preparing,Opening,Await
 struct FWardrobeAIEventLine {FString Text;FName Emotion;};
 struct FWardrobeAIEventOption {FString Id,Label;FWardrobeAIEventLine Reply;int32 MoodDelta=0;};
 struct FWardrobeAIEventPlan {
- FString Title,Description;FWardrobeAIEventLine Opening;TArray<FWardrobeAIEventOption> Options;
+ FString Title,Description,AstrBotReceipt;FWardrobeAIEventLine Opening;TArray<FWardrobeAIEventOption> Options;
 };
 namespace WardrobeAIEvent {
  FString BuildPlanRequest(const FWardrobeSpeechJob& Job,const FString& Background,int32 MaxChange);
