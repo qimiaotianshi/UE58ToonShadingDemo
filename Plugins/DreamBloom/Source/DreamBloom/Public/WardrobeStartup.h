@@ -55,4 +55,5 @@ private:
  double QAReadyAt=0,QAEnteredAt=0;
  int32 WarmupFrames=0;
  bool bActive=false,bCompleted=false,bNativeMovie=false,bSavedCursor=false;
+ bool bWorldRenderingSuppressed=false,bSavedWorldRenderingDisabled=false;
 };

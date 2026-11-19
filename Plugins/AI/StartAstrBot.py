@@ -1,6 +1,7 @@
 """Launch with the Python runtime beside this file; works after moving the project."""
 
 import os
+import argparse
 import runpy
 import shutil
 import site
@@ -8,6 +9,9 @@ import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parent
+options = argparse.ArgumentParser(add_help=False)
+options.add_argument('--parent-pid', type=int, default=0)
+ownership, _ = options.parse_known_args()
 data = root / "AstrBot/data"
 data.mkdir(exist_ok=True)
 # Prevent two PIE instances from launching duplicate model and database owners.
@@ -33,6 +37,9 @@ if "--console" not in sys.argv:
         "a", encoding="utf-8", buffering=1
     )
     sys.stderr = sys.stdout
+sys.path.insert(0, str(root.parent / 'DreamBloom/Resources/AI'))
+from wardrobe_service_lifetime import start_parent_watchdog
+start_parent_watchdog(ownership.parent_pid)
 site.addsitedir(str(root / "Runtime/Env/Lib/site-packages"))
 sys.path.insert(0, str(root / "AstrBot"))
 os.environ["ASTRBOT_ROOT"] = str(root / "AstrBot")

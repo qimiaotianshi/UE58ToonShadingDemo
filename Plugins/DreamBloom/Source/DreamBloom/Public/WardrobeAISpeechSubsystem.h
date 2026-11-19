@@ -2,6 +2,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UObject/SoftObjectPtr.h"
+#include "Containers/Ticker.h"
 #include "WardrobeAISpeechSubsystem.generated.h"
 class UWardrobeAISpeechComponent;class UWardrobeAISpeechData;class UNNEModelData;
 struct FWardrobeSpeechJob;struct FWardrobeSpeechRequest;struct FWardrobeSpeechWorker;struct FWardrobeSpeechClip;
@@ -26,22 +27,37 @@ public:
  /** Load and initialize the reusable face solver during the startup cover, without generating dialogue. */
  void Prewarm();
  bool IsPrewarming() const {return bPrewarming;}
+ bool IsFaceReady() const;
+ UFUNCTION(BlueprintPure,Category="AI Speech") bool AreServicesReady() const;
+ UFUNCTION(BlueprintPure,Category="AI Speech") FString GetServiceStatus() const;
+ UFUNCTION(BlueprintPure,Category="AI Speech") float GetServiceProgress() const;
+ UFUNCTION(BlueprintCallable,Category="AI Speech") void RetryServices();
 private:
+ friend class FWardrobeAIServiceReadinessTest;
  void RequestText(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R);
  void RequestVoice(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R);
  void Solve(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,TArray<uint8> Bytes);
  void Finish(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,const FString& Error);
  void EnsureService(const UWardrobeAISpeechData* Profile);
  void EnsureAstrBot(const UWardrobeAISpeechData* Profile);
+ bool TickServices(float DeltaSeconds);
+ void PrepareVoice(const UWardrobeAISpeechData* Profile,bool External);
  void PumpAstrBotCommits();
  TArray<FString> AstrBotCommits;
  bool bAstrBotCommitPending=false,bAstrBotCheckPending=false;
  TWeakObjectPtr<UWardrobeAISpeechData> ServiceProfile;
  bool bServiceConfigured=false,bServiceCheckPending=false,bServiceStarted=false;
+ bool bTTSReady=true,bAstrBotReady=true,bVoicePreparePending=false,bVoicePrepareSubmitted=false;
+ bool bTTSOnline=false,bAstrBotOnline=false;
+ int32 TTSLaunchAttempts=0,AstrBotLaunchAttempts=0;
+ FString TTSError,AstrBotError;
+ double NextServiceCheck=0,ServiceStartedAt=0;
+ FTSTicker::FDelegateHandle ServiceTicker;
+ TSharedPtr<class IHttpRequest,ESPMode::ThreadSafe> TTSHealth,AstrBotHealth,VoicePrepare;
  TSharedPtr<FWardrobeSpeechRequest,ESPMode::ThreadSafe> Active;
  TSharedPtr<FWardrobeSpeechWorker,ESPMode::ThreadSafe> Worker;
  TSharedPtr<FStreamableHandle> LoadHandle;
  // A reflected soft reference makes the streaming model discoverable by the cooker.
  UPROPERTY() TSoftObjectPtr<UNNEModelData> FaceModel;
- bool bEnding=false,bPrewarming=false;
+ bool bEnding=false,bPrewarming=false,bFaceRequired=false;
 };

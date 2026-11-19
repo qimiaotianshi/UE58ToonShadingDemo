@@ -49,3 +49,6 @@ Content/AI/
 **/*.pyc
 __pycache__/
 **/TEMP/gradio/
+
+# ===== 压缩包（不上传）=====
+*.7z

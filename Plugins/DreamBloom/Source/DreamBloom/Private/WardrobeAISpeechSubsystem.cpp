@@ -2,6 +2,7 @@
 #include "WardrobeStartup.h"
 #include "WardrobeAISpeechTypes.h"
 #include "WardrobeAISpeechPaths.h"
+#include "WardrobeAIServiceLifecycle.h"
 #include "Async/Async.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
@@ -35,6 +36,12 @@ namespace {
 FString Encode(const TSharedRef<FJsonObject>& O){FString S;FJsonSerializer::Serialize(O,TJsonWriterFactory<>::Create(&S));return S;}
 FString UTF8(const TArray<uint8>& B){FUTF8ToTCHAR C(reinterpret_cast<const ANSICHAR*>(B.GetData()),B.Num());return FString(C.Length(),C.Get());}
 bool ValidHTTP(const FString& S){return S.StartsWith(TEXT("http://"))||S.StartsWith(TEXT("https://"));}
+FString ServiceKey(const TCHAR* Kind){return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir())+Kind;}
+TSharedPtr<FJsonObject> ReadServiceJSON(const FHttpResponsePtr& Response){
+ TSharedPtr<FJsonObject> Result;
+ if(Response&&Response->GetResponseCode()==200)FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()),Result);
+ return Result;
+}
 // A bounded streamed body prevents even a malfunctioning server from building an unlimited response.
 FHttpRequestRef MakeHTTP(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,const FString& URL,const FString& JSON,int32 Limit){
  R->Body.Reset();R->Limit=Limit;R->bOverflow=false;
@@ -52,7 +59,12 @@ void UWardrobeAISpeechSubsystem::ConfigureService(UWardrobeAISpeechData* Profile
  check(IsInGameThread());if(bEnding||!IsValid(Profile))return;
  const bool Changed=!bServiceConfigured||ServiceProfile.Get()!=Profile;
  ServiceProfile=Profile;bServiceConfigured=true;
- if(Changed){EnsureService(Profile);EnsureAstrBot(Profile);}
+ if(Changed){
+  bTTSReady=!Profile->bEnabled;bAstrBotReady=!Profile->bEnabled||!Profile->bUseAstrBot;
+  bVoicePrepareSubmitted=false;TTSError.Reset();AstrBotError.Reset();ServiceStartedAt=FPlatformTime::Seconds();NextServiceCheck=0;
+  TTSLaunchAttempts=0;AstrBotLaunchAttempts=0;
+  EnsureService(Profile);EnsureAstrBot(Profile);
+ }
 }
 FString UWardrobeAISpeechSubsystem::GetResolvedTTSRoot() const{
  const auto* Profile=ServiceProfile.Get();if(!Profile)return {};
@@ -62,9 +74,15 @@ UWardrobeAISpeechSubsystem::UWardrobeAISpeechSubsystem(){FaceModel=TSoftObjectPt
 void UWardrobeAISpeechSubsystem::Initialize(FSubsystemCollectionBase& C){
  C.InitializeDependency<UWardrobeStartupSubsystem>();
  Super::Initialize(C);bEnding=false;bServiceConfigured=false;bServiceCheckPending=false;bServiceStarted=false;ServiceProfile.Reset();
+ ServiceTicker=FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this,&UWardrobeAISpeechSubsystem::TickServices));
 }
 void UWardrobeAISpeechSubsystem::Deinitialize(){
- bEnding=true;if(Active){Active->Cancelled.Store(true);if(Active->HTTP)Active->HTTP->CancelRequest();Active->HTTP.Reset();}
+ bEnding=true;FTSTicker::GetCoreTicker().RemoveTicker(ServiceTicker);
+ for(auto* Request:{&TTSHealth,&AstrBotHealth,&VoicePrepare})if(Request->IsValid()){
+  (*Request)->OnProcessRequestComplete().Unbind();(*Request)->CancelRequest();Request->Reset();
+ }
+ WardrobeAIServiceLifecycle::ReleaseClient(this);
+ if(Active){Active->Cancelled.Store(true);if(Active->HTTP)Active->HTTP->CancelRequest();Active->HTTP.Reset();}
  if(LoadHandle)LoadHandle->CancelHandle();LoadHandle.Reset();Active.Reset();Worker.Reset();ServiceProfile.Reset();Super::Deinitialize();
 }
 void UWardrobeAISpeechSubsystem::EnsureAstrBot(const UWardrobeAISpeechData* Profile){
@@ -72,17 +90,30 @@ void UWardrobeAISpeechSubsystem::EnsureAstrBot(const UWardrobeAISpeechData* Prof
  const FString Root=FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(),TEXT("Plugins/AI")));
  TArray<FString> Runtimes;IFileManager::Get().FindFiles(Runtimes,*FPaths::Combine(Root,TEXT("Runtime/Python/cpython-*")),false,true);
  Runtimes.Sort([](const FString& A,const FString& B){return A.Len()>B.Len();});
- if(Runtimes.IsEmpty()||!FPaths::FileExists(FPaths::Combine(Root,TEXT("StartAstrBot.py")))){UE_LOG(LogWardrobeAISpeech,Warning,TEXT("AstrBot runtime is missing. Install the companion tools in Project/Plugins/AI."));return;}
+ if(Runtimes.IsEmpty()||!FPaths::FileExists(FPaths::Combine(Root,TEXT("StartAstrBot.py")))){AstrBotError=TEXT("AstrBot runtime is missing in Plugins/AI.");return;}
  const FString Python=FPaths::Combine(Root,TEXT("Runtime/Python"),Runtimes[0],TEXT("python.exe"));
- auto H=FHttpModule::Get().CreateRequest();H->SetURL(TEXT("http://127.0.0.1:6186/status"));H->SetVerb(TEXT("GET"));H->SetTimeout(2.f);bAstrBotCheckPending=true;
+ WardrobeAIServiceLifecycle::RegisterClient(ServiceKey(TEXT("astrbot")),this);
+ auto H=FHttpModule::Get().CreateRequest();AstrBotHealth=H;H->SetURL(TEXT("http://127.0.0.1:6186/status"));H->SetVerb(TEXT("GET"));H->SetTimeout(2.f);bAstrBotCheckPending=true;
+ H->SetDelegateThreadPolicy(EHttpRequestDelegateThreadPolicy::CompleteOnGameThread);
  H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),Expected=TWeakObjectPtr<const UWardrobeAISpeechData>(Profile),Python,Root](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
-  if(!Weak.IsValid()||Weak->bEnding)return;Weak->bAstrBotCheckPending=false;
+  if(!Weak.IsValid()||Weak->bEnding)return;Weak->bAstrBotCheckPending=false;Weak->AstrBotHealth.Reset();
   if(Weak->ServiceProfile.Get()!=Expected.Get())return;
-  if(OK&&Response)return;
-  const FString Args=TEXT("\"")+FPaths::Combine(Root,TEXT("StartAstrBot.py"))+TEXT("\"");
-  auto P=FPlatformProcess::CreateProc(*Python,*Args,true,true,true,nullptr,0,*Root,nullptr);
-  if(P.IsValid()){FPlatformProcess::CloseProc(P);UE_LOG(LogWardrobeAISpeech,Display,TEXT("Started project-local AstrBot asynchronously."));}
-  else UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Could not start AstrBot."));
+  Weak->bAstrBotReady=false;
+  Weak->bAstrBotOnline=OK&&Response&&Response->GetResponseCode()==200;
+  if(OK&&Response){
+   auto J=ReadServiceJSON(Response);bool Ready=false;
+   double Version=0;
+   if(J&&J->TryGetNumberField(TEXT("version"),Version)&&Version>=2&&J->TryGetBoolField(TEXT("ready"),Ready)){
+    Weak->bAstrBotReady=Ready;if(Ready)Weak->AstrBotError.Reset();
+   }else Weak->AstrBotError=TEXT("AstrBot status is invalid; inspect Plugins/AI/AstrBot/data/logs/wardrobe-service.log.");
+   return;
+  }
+  if(WardrobeAIServiceLifecycle::IsRunning(ServiceKey(TEXT("astrbot"))))return;
+  if(Weak->AstrBotLaunchAttempts>=2){Weak->AstrBotError=TEXT("AstrBot exited during startup; inspect its service log and press R to retry.");return;}
+  ++Weak->AstrBotLaunchAttempts;
+  const FString Args=FString::Printf(TEXT("\"%s\" --parent-pid %u"),*FPaths::Combine(Root,TEXT("StartAstrBot.py")),FPlatformProcess::GetCurrentProcessId());
+  if(WardrobeAIServiceLifecycle::Launch(ServiceKey(TEXT("astrbot")),Weak.Get(),Python,Args,Root)){UE_LOG(LogWardrobeAISpeech,Display,TEXT("Started owned AstrBot; waiting for plugins, provider and transport."));}
+  else Weak->AstrBotError=TEXT("Could not start AstrBot. Check the installed Python runtime.");
  });if(!H->ProcessRequest())bAstrBotCheckPending=false;
 }
 void UWardrobeAISpeechSubsystem::CommitAstrBotClip(const FWardrobeSpeechClip& Clip){
@@ -102,33 +133,102 @@ void UWardrobeAISpeechSubsystem::PumpAstrBotCommits(){
 }
 bool UWardrobeAISpeechSubsystem::IsBusy() const{return Active.IsValid();}
 void UWardrobeAISpeechSubsystem::EnsureService(const UWardrobeAISpeechData* Profile){
- if(!Profile||!Profile->bEnabled||!Profile->bAutoStart||IsRunningCommandlet()||bServiceCheckPending||bServiceStarted)return;
- FString Error;const FString Root=WardrobeAISpeech::ResolveTTSRoot(Profile->TTSRoot,FPaths::ProjectDir(),Error);
- if(Root.IsEmpty()){UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Auto-start skipped: %s"),*Error);return;}
+ if(!Profile||!Profile->bEnabled||IsRunningCommandlet()||bServiceCheckPending)return;
+ FString Error;const FString Root=Profile->bAutoStart?WardrobeAISpeech::ResolveTTSRoot(Profile->TTSRoot,FPaths::ProjectDir(),Error):FString();
+ if(Profile->bAutoStart&&Root.IsEmpty()){TTSError=Error;return;}
  const FString Device=Profile->TTSDevice==EWardrobeTTSDevice::CUDA?TEXT("cuda"):TEXT("cpu");
  const int32 Threads=FMath::Clamp(Profile->CPUThreads,1,8);
  const FString Python=FPaths::Combine(Root,TEXT("runtime/python.exe"));
  const auto Plugin=IPluginManager::Get().FindPlugin(TEXT("DreamBloom"));
- if(!Plugin||!FPaths::FileExists(Python)){UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Auto-start skipped: configure a valid local TTSRoot."));return;}
+ if(!Plugin||(Profile->bAutoStart&&!FPaths::FileExists(Python))){TTSError=TEXT("Configure a valid local TTSRoot.");return;}
  const FString Script=FPaths::ConvertRelativePathToFull(FPaths::Combine(Plugin->GetBaseDir(),TEXT("Resources/AI/wardrobe_tts_server.py")));
- if(!FPaths::FileExists(Script)){UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Auto-start skipped: DreamBloom Resources/AI/wardrobe_tts_server.py was not staged as a loose file."));return;}
- auto H=FHttpModule::Get().CreateRequest();H->SetURL(TEXT("http://127.0.0.1:9880/wardrobe/status"));H->SetVerb(TEXT("GET"));H->SetTimeout(2.f);
+ if(Profile->bAutoStart&&!FPaths::FileExists(Script)){TTSError=TEXT("wardrobe_tts_server.py is missing from DreamBloom/Resources/AI.");return;}
+ if(Profile->bAutoStart)WardrobeAIServiceLifecycle::RegisterClient(ServiceKey(TEXT("tts")),this);
+ const FString Health=Profile->TTSEndpoint.EndsWith(TEXT("/tts"))?Profile->TTSEndpoint.LeftChop(4)+TEXT("/wardrobe/status"):Profile->TTSEndpoint+TEXT("/wardrobe/status");
+ auto H=FHttpModule::Get().CreateRequest();TTSHealth=H;H->SetURL(Health);H->SetVerb(TEXT("GET"));H->SetTimeout(2.f);
+ H->SetDelegateThreadPolicy(EHttpRequestDelegateThreadPolicy::CompleteOnGameThread);
  bServiceCheckPending=true;
  H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),Expected=TWeakObjectPtr<const UWardrobeAISpeechData>(Profile),Python,Script,Root,Device,Threads](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
   if(!Weak.IsValid()||Weak->bEnding)return;
-  Weak->bServiceCheckPending=false;
+  Weak->bServiceCheckPending=false;Weak->TTSHealth.Reset();
   if(Weak->ServiceProfile.Get()!=Expected.Get()){Weak->EnsureService(Weak->ServiceProfile.Get());return;}
-  // Any HTTP server on the port is already owned by the user; never launch a duplicate.
-  if(OK&&Response){Weak->bServiceStarted=true;return;}
-  const FString Args=FString::Printf(TEXT("\"%s\" --root \"%s\" --device %s --cpu-threads %d"),*Script,*Root,*Device,Threads);
-  auto P=FPlatformProcess::CreateProc(*Python,*Args,true,true,true,nullptr,0,*Root,nullptr);
-  if(P.IsValid()){Weak->bServiceStarted=true;FPlatformProcess::CloseProc(P);UE_LOG(LogWardrobeAISpeech,Display,TEXT("Started the local serialized TTS service. Models remain resident until the service is stopped."));}
-  else UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Could not start the local TTS service."));
+  const auto* P=Expected.Get();if(!P)return;
+  Weak->bTTSOnline=OK&&Response&&Response->GetResponseCode()==200;
+  if(OK&&Response){
+   auto J=ReadServiceJSON(Response);double Version=0;bool Ready=false;FString Error;
+   if(J&&J->TryGetNumberField(TEXT("version"),Version)&&Version>=2){
+    J->TryGetBoolField(TEXT("ready"),Ready);J->TryGetStringField(TEXT("error"),Error);
+    if(!Error.IsEmpty()&&Weak->bVoicePrepareSubmitted){Weak->TTSError=Error.Left(400);Weak->bTTSReady=false;return;}
+    if(Weak->bVoicePrepareSubmitted&&Ready){Weak->bTTSReady=true;Weak->TTSError.Reset();return;}
+    if(!Weak->bVoicePrepareSubmitted)Weak->PrepareVoice(P,false);
+   }else if(!P->bAutoStart&&!Weak->bVoicePrepareSubmitted){Weak->PrepareVoice(P,true);}
+   else if(P->bAutoStart){Weak->TTSError=TEXT("An old/incompatible TTS service occupies the port. Stop it and restart the game.");Weak->bTTSReady=false;}
+   return;
+  }
+  Weak->bTTSReady=false;Weak->bVoicePrepareSubmitted=false;
+  if(!P->bAutoStart){Weak->TTSError=TEXT("External TTS service is unavailable.");return;}
+  if(WardrobeAIServiceLifecycle::IsRunning(ServiceKey(TEXT("tts"))))return;
+  if(Weak->TTSLaunchAttempts>=2){Weak->TTSError=TEXT("TTS exited during startup; inspect Saved/AIServices/gpt-sovits.log and press R to retry.");return;}
+  ++Weak->TTSLaunchAttempts;
+  const FString Log=FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir()/TEXT("AIServices/gpt-sovits.log"));
+  const FString Args=FString::Printf(TEXT("\"%s\" --root \"%s\" --device %s --cpu-threads %d --parent-pid %u --log-file \"%s\""),*Script,*Root,*Device,Threads,FPlatformProcess::GetCurrentProcessId(),*Log);
+  if(WardrobeAIServiceLifecycle::Launch(ServiceKey(TEXT("tts")),Weak.Get(),Python,Args,Root)){UE_LOG(LogWardrobeAISpeech,Display,TEXT("Started owned TTS; waiting for reference-audio inference."));}
+  else Weak->TTSError=TEXT("Could not start the local TTS service.");
  });if(!H->ProcessRequest())bServiceCheckPending=false;
+}
+bool UWardrobeAISpeechSubsystem::TickServices(float){
+ if(bEnding)return false;
+ const auto* Profile=ServiceProfile.Get();const double Now=FPlatformTime::Seconds();
+ if(Profile&&Profile->bEnabled&&Now>=NextServiceCheck){
+  NextServiceCheck=Now+1.;EnsureService(Profile);EnsureAstrBot(Profile);
+ }
+ return true;
+}
+bool UWardrobeAISpeechSubsystem::AreServicesReady() const{
+ const auto* Profile=ServiceProfile.Get();return !Profile||!Profile->bEnabled||(bTTSReady&&(!Profile->bUseAstrBot||bAstrBotReady));
+}
+FString UWardrobeAISpeechSubsystem::GetServiceStatus() const{
+ if(!TTSError.IsEmpty())return TEXT("语音服务准备失败，请检查配置和 Saved/AIServices/gpt-sovits.log（R 重试）");
+ if(!AstrBotError.IsEmpty())return TEXT("陪伴服务准备失败，请检查 AstrBot 日志（R 重试）");
+ if(!bAstrBotReady)return TEXT("正在启动陪伴与记忆服务…");
+ if(!bTTSReady)return TEXT("正在加载语音模型并验证声线…");
+ return TEXT("AI服务已就绪");
+}
+void UWardrobeAISpeechSubsystem::RetryServices(){
+ TTSError.Reset();AstrBotError.Reset();bVoicePrepareSubmitted=false;NextServiceCheck=0;ServiceStartedAt=FPlatformTime::Seconds();
+ TTSLaunchAttempts=0;AstrBotLaunchAttempts=0;
+ if(bFaceRequired&&!IsFaceReady())Prewarm();
+}
+float UWardrobeAISpeechSubsystem::GetServiceProgress() const{
+ const auto* Profile=ServiceProfile.Get();if(!Profile||!Profile->bEnabled)return 1.f;
+ const float Voice=(float(bTTSOnline)+float(bTTSReady))*.5f;
+ const float Companion=Profile->bUseAstrBot?(float(bAstrBotOnline)+float(bAstrBotReady))*.5f:1.f;
+ return (Voice+Companion)*.5f;
+}
+void UWardrobeAISpeechSubsystem::PrepareVoice(const UWardrobeAISpeechData* Profile,bool External){
+ if(!Profile||bVoicePreparePending)return;
+ FString Ref=Profile->ReferenceAudio.FilePath;
+ if(FPaths::IsRelative(Ref))if(auto Plugin=IPluginManager::Get().FindPlugin(TEXT("DreamBloom")))Ref=FPaths::ConvertRelativePathToFull(Plugin->GetBaseDir()/Ref);
+ if(Ref.IsEmpty()||!FPaths::FileExists(Ref)||Profile->ReferenceText.IsEmpty()){
+  TTSError=TEXT("Configure Reference Audio and its exact Reference Text in the AI Speech DA.");return;
+ }
+ FWardrobeSpeechJob Job;Job.Text=TEXT("你好。");Job.ReferenceAudio=Ref;Job.ReferenceText=Profile->ReferenceText;Job.Language=Profile->Language;
+ auto Body=WardrobeAISpeech::BuildVoiceRequest(Job);
+ auto H=FHttpModule::Get().CreateRequest();VoicePrepare=H;bVoicePreparePending=true;
+ H->SetURL(External?Profile->TTSEndpoint:Profile->TTSEndpoint.LeftChop(4)+TEXT("/wardrobe/prepare"));H->SetVerb(TEXT("POST"));H->SetHeader(TEXT("Content-Type"),TEXT("application/json"));H->SetContentAsString(Encode(Body));H->SetTimeout(External?120.f:10.f);
+ H->SetDelegateThreadPolicy(EHttpRequestDelegateThreadPolicy::CompleteOnGameThread);
+ H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),External](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
+  auto* S=Weak.Get();if(!S||S->bEnding)return;S->VoicePrepare.Reset();S->bVoicePreparePending=false;
+  if(OK&&Response&&(Response->GetResponseCode()==200||(!External&&Response->GetResponseCode()==202))){
+   S->bVoicePrepareSubmitted=true;
+   if(External){const auto& Bytes=Response->GetContent();S->bTTSReady=Bytes.Num()>44&&Bytes[0]=='R'&&Bytes[1]=='I'&&Bytes[2]=='F'&&Bytes[3]=='F';}
+  }else S->TTSError=TEXT("Reference-audio warmup failed. Inspect Saved/AIServices/gpt-sovits.log.");
+ });
+ if(!H->ProcessRequest()){VoicePrepare.Reset();bVoicePreparePending=false;TTSError=TEXT("Could not submit voice warmup.");}
 }
 void UWardrobeAISpeechSubsystem::Prewarm(){
  check(IsInGameThread());if(bEnding||Active||Worker||bPrewarming)return;
- bPrewarming=true;
+ bPrewarming=true;bFaceRequired=true;
  LoadHandle=UAssetManager::GetStreamableManager().RequestAsyncLoad(FaceModel.ToSoftObjectPath(),FStreamableDelegate::CreateLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this)]{
   auto* S=Weak.Get();if(!S||S->bEnding)return;S->LoadHandle.Reset();
   auto* M=S->FaceModel.Get();
@@ -148,6 +248,7 @@ void UWardrobeAISpeechSubsystem::Prewarm(){
  }));
  if(!LoadHandle){bPrewarming=false;UE_LOG(LogWardrobeAISpeech,Warning,TEXT("Startup face warmup: could not queue the model."));}
 }
+bool UWardrobeAISpeechSubsystem::IsFaceReady() const{return !bFaceRequired||(!bPrewarming&&Worker&&Worker->Solver);}
 bool UWardrobeAISpeechSubsystem::Start(const FWardrobeSpeechJob& Input){
  check(IsInGameThread());if(bEnding||Active||bPrewarming)return false;
  if(auto* Owner=Input.Owner.Get())ConfigureService(const_cast<UWardrobeAISpeechData*>(Owner->GetProfile()));
@@ -161,6 +262,7 @@ bool UWardrobeAISpeechSubsystem::Start(const FWardrobeSpeechJob& Input){
  if(!ValidHTTP(Input.TTSEndpoint)||R->Job.ReferenceAudio.IsEmpty()||R->Job.ReferenceText.IsEmpty()){
   Finish(R,TEXT("Configure Reference Audio and its exact Reference Text in the AI Speech DA."));return true;
  }
+ if(!AreServicesReady()){Finish(R,TEXT("AI services are not ready: ")+GetServiceStatus());return true;}
  if(Input.Text.IsEmpty()){
   if(!ValidHTTP(Input.Endpoint)){Finish(R,TEXT("Configure Chat Endpoint in the AI Speech DA."));return true;}
   RequestText(R);
@@ -205,7 +307,14 @@ void UWardrobeAISpeechSubsystem::RequestVoice(TSharedRef<FWardrobeSpeechRequest,
  H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),R](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
   auto* S=Weak.Get();if(!S||S->bEnding){R->HTTP.Reset();return;}
   if(R->Cancelled.Load()){S->Finish(R,TEXT(""));return;}
-  if(!OK||!Response||Response->GetResponseCode()!=200||R->bOverflow){S->Finish(R,TEXT("TTS request failed. Check the local service, reference audio and exact prompt text."));return;}
+  if(!OK||!Response||Response->GetResponseCode()!=200||R->bOverflow){
+   FString Detail;TSharedPtr<FJsonObject> Failure;
+   if(!R->Body.IsEmpty()&&FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(UTF8(R->Body)),Failure)&&Failure){
+    if(!Failure->TryGetStringField(TEXT("Exception"),Detail))Failure->TryGetStringField(TEXT("message"),Detail);
+   }
+   const int32 Code=Response?Response->GetResponseCode():0;
+   S->Finish(R,FString::Printf(TEXT("TTS failed (HTTP %d%s). %s Inspect Saved/AIServices/gpt-sovits.log."),Code,OK?TEXT(""):TEXT(", connection/timeout"),*Detail.Left(400)));return;
+  }
   R->HTTP.Reset();S->Solve(R,MoveTemp(R->Body));
  });if(!H->ProcessRequest())Finish(R,TEXT("Could not submit the TTS request."));
 }

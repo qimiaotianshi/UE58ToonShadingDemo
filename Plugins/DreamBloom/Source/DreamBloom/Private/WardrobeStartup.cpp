@@ -20,6 +20,8 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Text/STextBlock.h"
+#include "Widgets/SBoxPanel.h"
+#include "Widgets/Notifications/SProgressBar.h"
 #include "Styling/CoreStyle.h"
 #include "Fonts/CompositeFont.h"
 #include "Interfaces/IPluginManager.h"
@@ -43,10 +45,11 @@ public:
   SLATE_ARGUMENT(TSharedPtr<FWardrobeStartupVisual>,Visual)
   SLATE_ARGUMENT(bool,NativeMovie)
   SLATE_EVENT(FSimpleDelegate,OnEnter)
+  SLATE_EVENT(FSimpleDelegate,OnRetry)
  SLATE_END_ARGS()
  void Construct(const FArguments& Args)
  {
-  Visual=Args._Visual;bNative=Args._NativeMovie;OnEnter=Args._OnEnter;
+  Visual=Args._Visual;bNative=Args._NativeMovie;OnEnter=Args._OnEnter;OnRetry=Args._OnRetry;
   ChildSlot[
    SNew(SOverlay)
    +SOverlay::Slot()[SNew(SImage).Image(FCoreStyle::Get().GetBrush("WhiteBrush")).ColorAndOpacity(FLinearColor::Black)
@@ -58,14 +61,21 @@ public:
    +SOverlay::Slot()[SNew(SImage).Image(FCoreStyle::Get().GetBrush("WhiteBrush"))
     .ColorAndOpacity_Lambda([this]{return FLinearColor(0,0,0,Visual->FadeBaked?0.f:Visual->Closing.load());})]
    +SOverlay::Slot().HAlign(HAlign_Center).VAlign(VAlign_Bottom).Padding(0,0,0,100)
-    [SNew(STextBlock).Text_Lambda([this]{return FText::FromString(Visual->SceneReady.load()?TEXT("点击运行游戏"):TEXT("少女祈祷中…"));})
+    [SNew(SBox).WidthOverride(760)[SNew(SVerticalBox)
+     +SVerticalBox::Slot().AutoHeight().Padding(40,0,40,16)
+     [SNew(SBox).HeightOverride(10)[SNew(SProgressBar).Style(&Visual->ProgressStyle).Percent_Lambda([this]{return TOptional<float>(Visual->Progress.load());})
+      .FillColorAndOpacity(FLinearColor(1.f,.40f,.66f))]
+      .Visibility_Lambda([this]{return Visual->MovieDone.load()&&!Visual->SceneReady.load()?EVisibility::HitTestInvisible:EVisibility::Collapsed;})]
+     +SVerticalBox::Slot().AutoHeight()
+    [SNew(STextBlock).Text_Lambda([this]{return FText::FromString(Visual->SceneReady.load()?TEXT("点击运行游戏"):((bNative&&!OnRetry.IsBound())?TEXT("少女祈祷中…"):Visual->ServiceStatus));})
      .Font(FSlateFontInfo(Visual->Font,26))
+     .AutoWrapText(true).Justification(ETextJustify::Center)
      .ColorAndOpacity_Lambda([this]{
       const float Entrance=Visual->MovieDone.load()?1.f:Visual->Closing.load();
       const float Breath=.25f+.75f*float((FMath::Cos(FPlatformTime::Seconds()*2.5)+1.)*.5);
-      return FLinearColor(1.f,.72f,.83f,Entrance*Breath);
+      return FLinearColor(1.f,.72f,.83f,Entrance*(Visual->SceneReady.load()?Breath:1.f));
      })
-     .Visibility_Lambda([this]{return Visual->MovieDone.load()||(!Visual->FadeBaked&&!bNative&&Visual->Closing.load()>0)?EVisibility::HitTestInvisible:EVisibility::Collapsed;})]
+     .Visibility_Lambda([this]{return Visual->MovieDone.load()||(!Visual->FadeBaked&&!bNative&&Visual->Closing.load()>0)?EVisibility::HitTestInvisible:EVisibility::Collapsed;})]]]
   ];
  }
  virtual void Tick(const FGeometry& G,double Time,float Dt) override
@@ -98,12 +108,16 @@ public:
  virtual FReply OnMouseButtonUp(const FGeometry&,const FPointerEvent&) override {return FReply::Handled();}
  virtual FReply OnMouseMove(const FGeometry&,const FPointerEvent&) override {return FReply::Handled();}
  virtual FReply OnMouseWheel(const FGeometry&,const FPointerEvent&) override {return FReply::Handled();}
- virtual FReply OnKeyDown(const FGeometry&,const FKeyEvent&) override {return FReply::Handled();}
+ virtual FReply OnKeyDown(const FGeometry&,const FKeyEvent& Event) override {
+  if(Event.GetKey()==EKeys::R&&Visual->MovieDone.load()&&!Visual->CanEnter())OnRetry.ExecuteIfBound();
+  return FReply::Handled();
+ }
  virtual FReply OnKeyUp(const FGeometry&,const FKeyEvent&) override {return FReply::Handled();}
  virtual FReply OnKeyChar(const FGeometry&,const FCharacterEvent&) override {return FReply::Handled();}
 private:
  TSharedPtr<FWardrobeStartupVisual> Visual;
  FSimpleDelegate OnEnter;
+ FSimpleDelegate OnRetry;
  FVector2D FitSize=FVector2D(1920,1080);
  bool bNative=false;
 };
@@ -158,7 +172,7 @@ void UWardrobeStartupSubsystem::BeginForMenu(UWardrobeMenu* Menu)
 {
  if(!Menu||!Menu->IsMenuMap()||bCompleted||MenuOwner.IsValid()||IsRunningCommandlet()||!FApp::CanEverRender())return;
  Settings=Menu->Data;MenuOwner=Menu;
- if(!Settings||!Settings->bPlayStartupMovie){bCompleted=true;return;}
+ if(!Settings){bCompleted=true;return;}
  if(!Visual){
   Visual=MakeShared<FWardrobeStartupVisual>();Visual->Aspect=Settings->StartupAspectRatio;
   Visual->FadeTime=Settings->StartupFadeTime;
@@ -171,10 +185,15 @@ void UWardrobeStartupSubsystem::BeginForMenu(UWardrobeMenu* Menu)
   }
  }
  bActive=true;StartedAt=FPlatformTime::Seconds();ReadyAt=0;WarmupFrames=0;
+ if(!Settings->bPlayStartupMovie)Visual->MovieDone.store(true);
  if(!bNativeMovie&&!Visual->MovieDone.load())BeginMediaMovie();
- Overlay=SNew(SWardrobeStartupScreen).Visual(Visual).NativeMovie(bNativeMovie).OnEnter(FSimpleDelegate::CreateWeakLambda(this,[this]{EnterGame();}));
+ Overlay=SNew(SWardrobeStartupScreen).Visual(Visual).NativeMovie(bNativeMovie).OnEnter(FSimpleDelegate::CreateWeakLambda(this,[this]{EnterGame();}))
+  .OnRetry(FSimpleDelegate::CreateWeakLambda(this,[this]{if(auto* AI=GetGameInstance()->GetSubsystem<UWardrobeAISpeechSubsystem>())AI->RetryServices();}));
  if(auto* Viewport=GetGameInstance()->GetGameViewportClient())Viewport->AddViewportWidgetContent(Overlay.ToSharedRef(),20000);
  GuardInput();
+ if(auto* Viewport=GetGameInstance()->GetGameViewportClient()){
+  bSavedWorldRenderingDisabled=Viewport->bDisableWorldRendering;Viewport->bDisableWorldRendering=true;bWorldRenderingSuppressed=true;
+ }
  bool HasAI=false;
  if(Settings->CharacterData)for(const auto& Character:Settings->CharacterData->Characters)if(Character.AISpeech&&Character.AISpeech->bEnabled){
   HasAI=true;const FString Endpoint=Character.AISpeech->TTSEndpoint;
@@ -228,18 +247,6 @@ bool UWardrobeStartupSubsystem::Tick(float Dt)
 #endif
  if(!bActive||!Visual||!MenuOwner.IsValid())return true;
  GuardInput();const double Now=FPlatformTime::Seconds();++WarmupFrames;
- if(!bTTSReady&&!HealthRequest&&Now>=NextHealthCheck){
-  HealthRequest=FHttpModule::Get().CreateRequest();HealthRequest->SetURL(HealthURL);HealthRequest->SetVerb(TEXT("GET"));HealthRequest->SetTimeout(2.f);
-  HealthRequest->SetDelegateThreadPolicy(EHttpRequestDelegateThreadPolicy::CompleteOnGameThread);
-  HealthRequest->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeStartupSubsystem>(this)](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
-   auto* S=Weak.Get();if(!S||!S->bActive)return;S->HealthRequest.Reset();S->NextHealthCheck=FPlatformTime::Seconds()+1.;
-   // A different GPT-SoVITS server can omit our status route; a live 404 also proves it has booted.
-   if(OK&&Response&&(Response->GetResponseCode()==200||Response->GetResponseCode()==404)){
-    S->bTTSReady=true;UE_LOG(LogTemp,Display,TEXT("WARDROBE_STARTUP_TTS_READY"));
-   }
-  });
-  if(!HealthRequest->ProcessRequest()){HealthRequest.Reset();NextHealthCheck=Now+1.;}
- }
  if(MediaSound)MediaSound->UpdatePlayer();
  if(MediaPlayer&&!Visual->MovieDone.load()){
   const double Duration=MediaPlayer->GetDuration().GetTotalSeconds(),Time=MediaPlayer->GetTime().GetTotalSeconds();
@@ -252,11 +259,23 @@ bool UWardrobeStartupSubsystem::Tick(float Dt)
  }
  const auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();
  const auto* AI=GetGameInstance()->GetSubsystem<UWardrobeAISpeechSubsystem>();
- const bool Ready=WarmupFrames>=12&&Now-StartedAt>=1.5&&Loading&&Loading->IsSceneReady(GetWorld())&&(!AI||!AI->IsPrewarming())&&bTTSReady;
+ const bool ServicesReady=!AI||AI->AreServicesReady();
+ const bool FaceReady=!AI||AI->IsFaceReady();
+ if(ServicesReady&&FaceReady&&bWorldRenderingSuppressed){
+  if(auto* Viewport=GetGameInstance()->GetGameViewportClient())Viewport->bDisableWorldRendering=bSavedWorldRenderingDisabled;
+  bWorldRenderingSuppressed=false;WarmupFrames=0;ReadyAt=0;
+ }
+ const bool SceneReady=Loading&&Loading->IsSceneReady(GetWorld());
+ if(!bNativeMovie){
+  Visual->ServiceStatus=!ServicesReady?AI->GetServiceStatus():!FaceReady?(AI->IsPrewarming()?TEXT("正在初始化口型模型…"):TEXT("口型模型初始化失败，按 R 重试")):TEXT("正在准备角色展示…");
+  Visual->Progress.store(.6f*(AI?AI->GetServiceProgress():1.f)+.2f*float(FaceReady)+.2f*float(SceneReady));
+ }
+ const bool Ready=WarmupFrames>=12&&Now-StartedAt>=1.5&&Loading&&Loading->IsSceneReady(GetWorld())&&(!AI||!AI->IsPrewarming())&&ServicesReady;
  if(Ready){if(ReadyAt==0)ReadyAt=Now;}else ReadyAt=0;
  // A quiet half-second avoids showing the entry prompt between separate streaming/shader batches.
- const bool Finished=(ReadyAt>0&&Now-ReadyAt>=.5)||Now-StartedAt>=FMath::Max(5.f,Settings->StartupPrepareTimeout);
- if(Finished&&!Visual->SceneReady.exchange(true))UE_LOG(LogTemp,Display,TEXT("WARDROBE_STARTUP_SCENE_READY timeout=%d"),!Ready);
+ // A scene timeout never bypasses AI service/model readiness.
+ const bool Finished=ServicesReady&&FaceReady&&((ReadyAt>0&&Now-ReadyAt>=.5)||Now-StartedAt>=FMath::Max(5.f,Settings->StartupPrepareTimeout));
+ if(Finished&&!Visual->SceneReady.exchange(true)){Visual->Progress.store(1.f);UE_LOG(LogTemp,Display,TEXT("WARDROBE_STARTUP_SCENE_READY timeout=%d"),!Ready);}
 #if WITH_DEV_AUTOMATION_TESTS
  if(FParse::Param(FCommandLine::Get(),TEXT("WardrobeStartupQA"))){
   for(TActorIterator<AWardrobeShowcase> It(GetWorld());It;++It)if(It->AISpeech)It->AISpeech->SetAutomaticPaused(true);
@@ -280,6 +299,10 @@ bool UWardrobeStartupSubsystem::EnterGame()
 void UWardrobeStartupSubsystem::Finish()
 {
  if(!bActive&&bCompleted)return;
+ if(bWorldRenderingSuppressed){
+  if(auto* Viewport=GetGameInstance()->GetGameViewportClient())Viewport->bDisableWorldRendering=bSavedWorldRenderingDisabled;
+  bWorldRenderingSuppressed=false;
+ }
  if(Overlay)if(auto* Viewport=GetGameInstance()->GetGameViewportClient())Viewport->RemoveViewportWidgetContent(Overlay.ToSharedRef());
  if(GuardedController.IsValid()){GuardedController->SetIgnoreMoveInput(false);GuardedController->SetIgnoreLookInput(false);GuardedController->bShowMouseCursor=bSavedCursor;GuardedController->FlushPressedKeys();}
  GuardedController.Reset();

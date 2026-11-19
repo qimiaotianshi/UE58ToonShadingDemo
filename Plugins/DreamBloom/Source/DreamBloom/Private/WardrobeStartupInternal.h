@@ -3,6 +3,8 @@
 #include "Misc/Paths.h"
 #include "Styling/SlateBrush.h"
 #include "Fonts/CompositeFont.h"
+#include "Styling/SlateTypes.h"
+#include "Brushes/SlateColorBrush.h"
 #include <atomic>
 
 namespace WardrobeStartup
@@ -31,13 +33,17 @@ inline FString ResolveMovie(FString Path,const FString& ContentDir)
 // Only atomics/immutable Slate data are read on MoviePlayer's rendering/Slate thread.
 struct FWardrobeStartupVisual
 {
+ FWardrobeStartupVisual(){ProgressStyle.SetBackgroundImage(FSlateColorBrush(FLinearColor(.13f,.06f,.10f))).SetFillImage(FSlateColorBrush(FLinearColor::White)).SetMarqueeImage(FSlateColorBrush(FLinearColor::White));}
  std::atomic<bool> MovieDone{false},SceneReady{false},MovieFailed{false};
  std::atomic<float> Closing{0.f};
+ std::atomic<float> Progress{0.f};
  double NativeStartedAt=0,Duration=0;
  float FadeTime=1.5f;
  bool FadeBaked=false;
  float Aspect=16.f/9.f;
  FSlateBrush MovieBrush;
+ FProgressBarStyle ProgressStyle;
+ FString ServiceStatus=TEXT("少女祈祷中…");
  TSharedPtr<FCompositeFont> Font;
  bool CanEnter() const { return MovieDone.load()&&SceneReady.load(); }
 };
