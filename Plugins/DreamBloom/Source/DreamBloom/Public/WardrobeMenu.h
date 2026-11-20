@@ -58,7 +58,6 @@ public:
  void ChooseStorySlot(int32 Index,bool Overwrite);
  bool HasStory() const;
  bool StorySlotsOpen=false;
- void PrepareStoryTravel();
  UFUNCTION(BlueprintCallable,Category="Menu") void ReturnToMenu();
  UFUNCTION(BlueprintCallable,Category="Menu") void Quit();
  UFUNCTION(BlueprintCallable,Category="UI Audio") void PlayUISound(EWardrobeUISound Event);
@@ -101,6 +100,7 @@ private:
  friend class FWardrobeDestinationMenuTest;
  friend class FWardrobeDialogueMenuTest;
  UWardrobeAISpeechComponent* ActiveSpeech() const;
+ void FinishStoryLogin();
  void EndDialogue(bool PlaySound,bool RestoreFocus);
  TWeakObjectPtr<UWardrobeAISpeechComponent> DialogueSpeech;
  double NextTypingSoundTime=0;

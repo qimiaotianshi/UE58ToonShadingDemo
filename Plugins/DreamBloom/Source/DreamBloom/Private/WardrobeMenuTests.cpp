@@ -101,8 +101,9 @@ bool FWardrobeStoryMenuTest::RunTest(const FString&){
  Menu->OpenDialogue();Menu->OpenStorySlots(false);
  TestTrue(TEXT("Opening save slots cleans up dialogue pause"),!Menu->DialogueOpen&&!Speech->IsAutomaticPaused());Menu->CloseStorySlots();
  Menu->OpenDialogue();
- Menu->PrepareStoryTravel();TestFalse(TEXT("Real travel still shuts down showcase Sequence"),Person->IsDefaultSequencePlaying());
- TestFalse(TEXT("Map travel leaves no paused speech component"),Menu->DialogueOpen||Speech->IsAutomaticPaused());
+ Menu->FinishStoryLogin();
+ TestTrue(TEXT("Completing story login preserves the showcase Sequence"),Player==Person->GetDefaultSequencePlayer()&&Person->IsDefaultSequencePlaying());
+ TestFalse(TEXT("Completing story login leaves no paused speech component"),Menu->DialogueOpen||Speech->IsAutomaticPaused());
  Menu->StationController->Shutdown();Menu->ReleaseSlateResources(true);return true;
 }
 
@@ -138,7 +139,7 @@ bool FWardrobeDestinationMenuTest::RunTest(const FString&){
  TestEqual(TEXT("Name committed after slot creation"),Session->Name,FString(TEXT("测试旅人")));
  TestEqual(TEXT("Story starts at first narrative ID"),Story->GetCurrentStoryId(),Source->Steps[0].StoryId);
  auto* Saved=Cast<UWardrobeStorySave>(UGameplayStatics::LoadGameFromSlot(Story->SlotName(0),0));
- TestTrue(TEXT("Initial save uses a menu level instead of story level"),Saved&&Saved->Level==Data->Levels[1].Level);
+ if(!TestTrue(TEXT("Initial save uses a menu level instead of story level"),Saved&&Saved->Level==Data->Levels[1].Level))return false;
  Text=VisibleMenuText(Root);TestTrue(TEXT("Destination contains start and login return"),Text.Contains(TEXT("开始游戏"))&&Text.Contains(TEXT("返回登录")));
  for(const FString& Label:{TEXT("新游戏"),TEXT("继续游戏"),TEXT("继续"),TEXT("读取存档"),TEXT("读档")})TestFalse(TEXT("No save actions on destination screen"),Text.Contains(Label));
  Menu->OpenStorySlots(false);Menu->OpenStorySlots(true);Menu->ContinueGame();TestFalse(TEXT("Destination cannot reopen save actions"),Menu->StorySlotsOpen||Loading->IsLoading());
@@ -149,11 +150,31 @@ bool FWardrobeDestinationMenuTest::RunTest(const FString&){
  Loading->Finish(true);Story->ActiveSlot=Slot;Menu->SelectChoice(0);Menu->StartGame();
  TestEqual(TEXT("Another destination also follows Levels"),Loading->PackageName,Data->Levels[0].Level.ToSoftObjectPath().GetLongPackageName());Loading->Finish(true);
  Menu->ReturnToLogin();Text=VisibleMenuText(Root);TestTrue(TEXT("Login return exposes continue/load without deleting progress"),!Session->LoggedIn&&Text.Contains(TEXT("继续游戏"))&&Text.Contains(TEXT("读取存档"))&&Story->HasCampaign());
+ // Use a save whose next scene and recorded map differ from the destination chosen below.
+ Saved->NextStoryId=Source->Steps[1].StoryId;
+ Saved->CompletedStories.Add(Source->Steps[0].StoryId);
+ Saved->bHasPlayerTransform=true;
+ Saved->PlayerTransform=FTransform(FVector(12,34,56));
+ if(!TestTrue(TEXT("Write distinct checkpoint"),UGameplayStatics::SaveGameToSlot(Saved,Story->SlotName(0),0)))return false;
  Menu->OpenStorySlots(false);Menu->ChooseStorySlot(0,false);
- TestTrue(TEXT("Login read starts travel to saved map"),Loading->IsLoading()&&!Menu->StorySlotsOpen);
- TestEqual(TEXT("Read follows saved map even after destination selection changes"),Loading->PackageName,Saved->Level.ToSoftObjectPath().GetLongPackageName());Loading->Finish(true);
- Menu->ReturnToLogin();Menu->ContinueGame();TestTrue(TEXT("Login continue starts saved travel"),Loading->IsLoading());
- TestEqual(TEXT("Continue follows latest slot"),Loading->PackageName,Saved->Level.ToSoftObjectPath().GetLongPackageName());Loading->Finish(true);
+ TestTrue(TEXT("Reading a slot stays in showcase and closes the slot panel"),Session->LoggedIn&&!Loading->IsLoading()&&!Menu->StorySlotsOpen&&Menu->IsMenuMap());
+ TestEqual(TEXT("Read restores the saved story ID"),Story->GetCurrentStoryId(),Saved->NextStoryId);
+ TestEqual(TEXT("Read clears the old destination selection"),Menu->SelectedChoice(),INDEX_NONE);
+ Menu->StartGame();TestFalse(TEXT("Start requires explicit selection after read"),Loading->IsLoading());
+ Menu->OpenChoice(0);TestFalse(TEXT("Selecting a destination does not travel"),Loading->IsLoading());
+ Menu->StartGame();
+ TestTrue(TEXT("Start after read travels to the manually chosen map"),Loading->IsLoading());
+ TestEqual(TEXT("Start after read uses Levels instead of the saved map"),Loading->PackageName,Data->Levels[0].Level.ToSoftObjectPath().GetLongPackageName());
+ Loading->Finish(true);
+ Menu->ReturnToLogin();Menu->ContinueGame();
+ TestTrue(TEXT("Continue loads the latest slot without starting map travel"),Session->LoggedIn&&!Loading->IsLoading()&&Menu->IsMenuMap());
+ TestEqual(TEXT("Continue uses the latest saved name"),Session->Name,Saved->PlayerName);
+ TestEqual(TEXT("Continue clears the old destination selection"),Menu->SelectedChoice(),INDEX_NONE);
+ Menu->StartGame();TestFalse(TEXT("Start requires explicit selection after continue"),Loading->IsLoading());
+ Menu->SelectChoice(1);Menu->StartGame();
+ TestTrue(TEXT("Start after continue can also choose the saved map"),Loading->IsLoading());
+ TestEqual(TEXT("Start follows the chosen Levels entry"),Loading->PackageName,Saved->Level.ToSoftObjectPath().GetLongPackageName());
+ Loading->Finish(true);
  Menu->ReleaseSlateResources(true);return true;
 }
 

@@ -107,6 +107,7 @@ public:
  UFUNCTION(BlueprintPure,Category="Story") TArray<FWardrobeStorySlot> GetSaveSlots() const;
  /** Creates a slot without travel. The destination picker owns which map is entered. */
  UFUNCTION(BlueprintCallable,Category="Story") bool StartNewGame(int32 Slot,const FString& Name,UWardrobeMenuData* Menu,bool bOverwrite=false);
+ /** Restores the campaign in the showcase. Location is applied only after entering the saved map. */
  UFUNCTION(BlueprintCallable,Category="Story") bool ContinueGame(int32 Slot,UWardrobeMenuData* Menu);
  UFUNCTION(BlueprintCallable,Category="Story") bool ContinueLatest(UWardrobeMenuData* Menu);
  UFUNCTION(BlueprintCallable,Category="Story") bool SaveCheckpoint();
@@ -153,7 +154,6 @@ private:
  TMap<FString,TArray<uint8>> PendingSaves;
  TFuture<bool> SaveTask;FString WritingSlot;
  uint64 CampaignRevision=0;
- bool TravelToSave(UWardrobeStorySave* Candidate,int32 Slot,UWardrobeMenuData* Menu);
  bool IsSaveUsable(const UWardrobeStorySave* Candidate) const;
  int32 CurrentStepIndex() const;
  void StartLoadedSequence();
@@ -176,7 +176,7 @@ private:
  TSharedPtr<SWidget> Overlay;
  TWeakPtr<SWidget> PreviousFocus;
  FTSTicker::FDelegateHandle TickHandle;
- FDelegateHandle CleanupHandle,TravelHandle;
+ FDelegateHandle CleanupHandle;
  FTransform BeforeTransform=FTransform::Identity;
  FRotator BeforeControl=FRotator::ZeroRotator;
  bool bActive=false,bWaiting=false,bClickArmed=false,bFinishing=false,bRestorePending=false;

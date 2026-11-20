@@ -417,10 +417,13 @@ void UWardrobeMenu::CloseStorySlots(){
  if(!StorySlotsOpen)return;
  StorySlotsOpen=false;PlayUISound(EWardrobeUISound::Back);RestoreMenuFocus();
 }
-void UWardrobeMenu::PrepareStoryTravel(){
+void UWardrobeMenu::FinishStoryLogin(){
  EndDialogue(false,false);
- StorySlotsOpen=false;if(SlateMenu)SlateMenu->CancelPointerGesture();
- if(IsValid(StationController))StationController->SetPreviewEnabled(false);
+ StorySlotsOpen=false;
+ if(SlateMenu)SlateMenu->CancelPointerGesture();
+ Message=TEXT("欢迎来到达妮娅漫游，")+(Session()?Session()->Name:PendingNewGameName);
+ NoticeTime=3;
+ RestoreMenuFocus();
 }
 void UWardrobeMenu::ChooseStorySlot(int32 Index,bool Overwrite){
  if(!HasStory()||!StorySlotsOpen||!SlateMenu)return;
@@ -429,15 +432,14 @@ void UWardrobeMenu::ChooseStorySlot(int32 Index,bool Overwrite){
  const bool Success=NewGame?Story->StartNewGame(Index,PendingNewGameName,Data,Overwrite):Story->ContinueGame(Index,Data);
  if(Success){
   PlayUISound(EWardrobeUISound::SaveSlotSelect);
-  if(NewGame){StorySlotsOpen=false;Message=TEXT("欢迎来到达妮娅漫游，")+(Session()?Session()->Name:PendingNewGameName);NoticeTime=3;RestoreMenuFocus();}
-  else PrepareStoryTravel();
+  FinishStoryLogin();
  }
  else {Message=Story->LastError.ToString();NoticeTime=8;PlayUISound(EWardrobeUISound::Unavailable);}
 }
 void UWardrobeMenu::ContinueGame(){
  if(!HasStory()||!IsMenuMap()||IsLoggedIn()||QuitPrompt||StorySlotsOpen)return;
  auto* Story=GetGameInstance()->GetSubsystem<UWardrobeStorySubsystem>();
- if(Story->Configure(Data->StoryFlow)&&Story->ContinueLatest(Data)){PlayUISound(EWardrobeUISound::ContinueGame);PrepareStoryTravel();}
+ if(Story->Configure(Data->StoryFlow)&&Story->ContinueLatest(Data)){PlayUISound(EWardrobeUISound::ContinueGame);FinishStoryLogin();}
  else {Message=Story->LastError.ToString();NoticeTime=6;PlayUISound(EWardrobeUISound::Unavailable);}
 }
 TSharedRef<SWidget> UWardrobeMenu::RebuildWidget(){if(!Data)Data=LoadObject<UWardrobeMenuData>(nullptr,TEXT("/Game/Wardrobe/DA_WardrobeMenu.DA_WardrobeMenu"));SlateMenu=SNew(SWardrobeMenu).Owner(this);return SlateMenu.ToSharedRef();}
@@ -491,7 +493,7 @@ void UWardrobeMenu::ChangeMode(int32 I){
  else if(auto* Audio=GetGameInstance()->GetSubsystem<UWardrobeAudioSubsystem>()){FWardrobeSoundEntry Entry;Entry.Sound=Sound.Sound;Audio->PlayEntry(EWardrobeUISound::ActionSwitch,Entry);}
  Message=ModeLabel(Mode);NoticeTime=2.5f;RestoreMenuFocus();
 }
-void UWardrobeMenu::OpenChoice(int32 I){SelectChoice(I);if(SelectedChoice()==I)StartGame();}
+void UWardrobeMenu::OpenChoice(int32 I){SelectChoice(I);}
 void UWardrobeMenu::ReturnToMenu(){
  if(IsMenuMap())return;
  if(auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()){

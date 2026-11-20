@@ -33,6 +33,7 @@
 #include "Interfaces/IPluginManager.h"
 #include "Fonts/CompositeFont.h"
 #if WITH_EDITOR
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -126,9 +127,6 @@ private:
 
 void UWardrobeStorySubsystem::Initialize(FSubsystemCollectionBase& Collection){
  Super::Initialize(Collection);Collection.InitializeDependency<UWardrobeLoadingSubsystem>();
- TravelHandle=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()->OnTravelCompleted.AddWeakLambda(this,[this](bool Success){
-  if(!Success&&bRestorePending){bRestorePending=false;LastError=StoryText(TEXT("地图加载失败，请重新选择存档"));}
- });
  if(!IsRunningCommandlet()&&!IsRunningDedicatedServer()){
   TickHandle=FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this,&UWardrobeStorySubsystem::Tick));
   CleanupHandle=FWorldDelegates::OnWorldCleanup.AddUObject(this,&UWardrobeStorySubsystem::OnWorldCleanup);
@@ -136,7 +134,7 @@ void UWardrobeStorySubsystem::Initialize(FSubsystemCollectionBase& Collection){
 }
 void UWardrobeStorySubsystem::Deinitialize(){
  SaveCheckpoint();FlushPendingSaves();CancelCinematic();FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);FWorldDelegates::OnWorldCleanup.Remove(CleanupHandle);
- GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>()->OnTravelCompleted.Remove(TravelHandle);Save=nullptr;Flow=nullptr;Super::Deinitialize();
+ Save=nullptr;Flow=nullptr;Super::Deinitialize();
 }
 bool UWardrobeStorySubsystem::Configure(UWardrobeStoryFlow* InFlow){
  if(!InFlow||bActive)return false;
@@ -150,7 +148,7 @@ int32 UWardrobeStorySubsystem::CurrentStepIndex() const {
 }
 FName UWardrobeStorySubsystem::GetCurrentStoryId() const {return Save&&!Save->bStoryComplete?Save->NextStoryId:NAME_None;}
 bool UWardrobeStorySubsystem::IsSaveUsable(const UWardrobeStorySave* Candidate) const{
- if(!Candidate||!Flow||(Candidate->FormatVersion<1||Candidate->FormatVersion>3)||Candidate->FlowPath!=Flow->GetPathName()||Candidate->Level.IsNull()||!FPackageName::DoesPackageExist(Candidate->Level.ToSoftObjectPath().GetLongPackageName()))return false;
+ if(!Candidate||!Flow||(Candidate->FormatVersion<1||Candidate->FormatVersion>3)||Candidate->FlowPath!=Flow->GetPathName())return false;
  if(Candidate->bHasPlayerTransform&&(Candidate->PlayerTransform.ContainsNaN()||!Candidate->PlayerTransform.GetRotation().IsNormalized()||Candidate->ControlRotation.ContainsNaN()))return false;
  return Candidate->bStoryComplete||Flow->Steps.ContainsByPredicate([Candidate](const FWardrobeStoryStep& Step){return Step.StoryId==Candidate->NextStoryId;});
 }
@@ -165,17 +163,9 @@ TArray<FWardrobeStorySlot> UWardrobeStorySubsystem::GetSaveSlots() const{
   }else Info.Progress=StoryText(TEXT("空存档"));Result.Add(Info);
  }return Result;
 }
-bool UWardrobeStorySubsystem::TravelToSave(UWardrobeStorySave* Candidate,int32 Slot,UWardrobeMenuData* Menu){
- if(!IsSaveUsable(Candidate)||bActive||!GetGameInstance())return false;
- auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(!Loading||Loading->IsLoading())return false;
- if(!Loading->TravelToLevel(Candidate->Level,Menu,{},StoryText(TEXT("继续旅程")),TEXT("game=/Game/BluePrint/ALS/Game/BP_ALSGameMode.BP_ALSGameMode_C"))){LastError=StoryText(TEXT("无法加载存档地图，请检查地图与 GameMode 是否加入打包"));return false;}
- ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;bRestorePending=true;ObservedWorld.Reset();
- if(auto* Session=GetGameInstance()->GetSubsystem<UWardrobeSession>()){Session->Name=Save->PlayerName;Session->LoggedIn=true;Session->ExplorationMenuData=Menu;Session->ExplorationReturnLevel=Save->ReturnLevel;}
- return true;
-}
 bool UWardrobeStorySubsystem::StartNewGame(int32 Slot,const FString& Name,UWardrobeMenuData* Menu,bool bOverwrite){
  if(HasPendingSaves()){LastError=StoryText(TEXT("正在保存，请稍后重试"));return false;}
- if(!Flow||!Flow->Steps.IsValidIndex(0)||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16)||bActive||bRestorePending)return false;
+ if(!Flow||!Flow->Steps.IsValidIndex(0)||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16)||bActive)return false;
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(Loading&&Loading->IsLoading())return false;
  if(UGameplayStatics::DoesSaveGameExist(SlotName(Slot),0)&&!bOverwrite){LastError=StoryText(TEXT("此存档已存在，请确认覆盖或选择空槽"));return false;}
  auto* Session=GetGameInstance()->GetSubsystem<UWardrobeSession>();int32 Initial=Session?Session->SelectedMap:0;
@@ -185,17 +175,34 @@ bool UWardrobeStorySubsystem::StartNewGame(int32 Slot,const FString& Name,UWardr
  auto* Candidate=NewObject<UWardrobeStorySave>(this);Candidate->FlowPath=Flow->GetPathName();Candidate->PlayerName=Name.TrimStartAndEnd().Left(16);if(Candidate->PlayerName.IsEmpty())Candidate->PlayerName=TEXT("旅人");
  Candidate->CompanionCampaignId=FGuid::NewGuid();Candidate->NextStoryId=Flow->Steps[0].StoryId;Candidate->Level=Menu->Levels[Initial].Level;Candidate->MenuData=Menu;Candidate->ReturnLevel=StoryWorldAsset(GetWorld());
  Candidate->SavedAt=FDateTime::UtcNow();if(!UGameplayStatics::SaveGameToSlot(Candidate,SlotName(Slot),0)){LastError=StoryText(TEXT("新存档写入失败，请检查存档目录"));UE_LOG(LogTemp,Warning,TEXT("WARDROBE_STORY_SAVE_FAILED"));return false;}
- ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;ObservedWorld.Reset();LastError=FText::GetEmpty();
+ ++CampaignRevision;Save=Candidate;ActiveSlot=Slot;bRestorePending=false;ObservedWorld.Reset();LastError=FText::GetEmpty();
  if(Session){Session->Name=Candidate->PlayerName;Session->LoggedIn=true;Session->SelectedMap=Initial;Session->ExplorationMenuData=Menu;Session->ExplorationReturnLevel=Candidate->ReturnLevel;}
  UE_LOG(LogTemp,Display,TEXT("WARDROBE_STORY_NEW_SLOT slot=%d next=%s defaultMap=%s (destination selection pending)"),Slot,*Candidate->NextStoryId.ToString(),*Candidate->Level.ToString());
  return true;
 }
 bool UWardrobeStorySubsystem::ContinueGame(int32 Slot,UWardrobeMenuData* Menu){
  if(HasPendingSaves()){LastError=StoryText(TEXT("正在保存，请稍后重试"));return false;}
- if(!Flow||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16))return false;
+ if(!Flow||Slot<0||Slot>=FMath::Clamp(Flow->SaveSlotCount,1,16)||bActive)return false;
+ auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();
+ if(Loading&&Loading->IsLoading())return false;
  auto* Candidate=Cast<UWardrobeStorySave>(UGameplayStatics::LoadGameFromSlot(SlotName(Slot),0));
- if(!IsSaveUsable(Candidate)){LastError=StoryText(TEXT("存档无效或剧情编号、地图已被移除"));return false;}
- if(!Menu)Menu=Candidate->MenuData.LoadSynchronous();return TravelToSave(Candidate,Slot,Menu);
+ if(!IsSaveUsable(Candidate)){LastError=StoryText(TEXT("存档无效或剧情编号已被移除"));return false;}
+ if(!Menu)Menu=Candidate->MenuData.LoadSynchronous();
+ ++CampaignRevision;
+ Save=Candidate;
+ ActiveSlot=Slot;
+ bRestorePending=true;
+ ObservedWorld.Reset();
+ BlockedTrigger.Reset();
+ LastError=FText::GetEmpty();
+ if(auto* Session=GetGameInstance()->GetSubsystem<UWardrobeSession>()){
+  Session->Name=Save->PlayerName;
+  Session->LoggedIn=true;
+  Session->SelectedMap=INDEX_NONE;
+  Session->ExplorationMenuData=Menu;
+  Session->ExplorationReturnLevel=Save->ReturnLevel;
+ }
+ return true;
 }
 bool UWardrobeStorySubsystem::ContinueLatest(UWardrobeMenuData* Menu){
  int32 Best=INDEX_NONE;FDateTime Latest=FDateTime::MinValue();for(const auto& Slot:GetSaveSlots())if(Slot.bValid&&Slot.SavedAt>=Latest){Latest=Slot.SavedAt;Best=Slot.Index;}
@@ -373,7 +380,7 @@ void UWardrobeStorySubsystem::RunStoryQA(){
   if(Success)UGameplayStatics::DeleteGameInSlot(SlotName(2),0);ActiveSlot=INDEX_NONE;FPlatformMisc::RequestExit(false);QAStage=99;
  };
  if(QAStage==99)return;if(Now-QAStarted>150){Finish(false,FString::Printf(TEXT("watchdog stage=%d error=%s"),QAStage,*LastError.ToString()));return;}
- auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(L->IsLoading()||bRestorePending)return;
+ auto* L=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(L->IsLoading())return;
  auto* Session=GetGameInstance()->GetSubsystem<UWardrobeSession>();auto* Pawn=UGameplayStatics::GetPlayerPawn(this,0);auto* PC=UGameplayStatics::GetPlayerController(this,0);
  auto Capture=[](const FString& Name){FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir()/TEXT("Story77QA")/(Name+TEXT(".png")),true,false);};
  auto EnterArea=[this,Pawn](FName Id){if(!Pawn)return;for(TActorIterator<AWardrobeStoryTrigger> It(GetWorld());It;++It)if(It->TriggerId==Id){Pawn->SetActorLocation(It->GetActorLocation(),false,nullptr,ETeleportType::TeleportPhysics);return;}};
@@ -406,7 +413,16 @@ void UWardrobeStorySubsystem::RunStoryQA(){
  if(QAStage==5){if(auto* Explorer=Cast<AWardrobeExplorerController>(PC)){Explorer->ReturnToShowcase();QAStage=6;}return;}
  if(QAStage==6){
   if(UGameplayStatics::GetCurrentLevelName(this,true)!=TEXT("L_StoryMenu"))return;
-  Capture(TEXT("06-continue-menu"));if(!ContinueLatest(Session->ExplorationMenuData)){Finish(false,LastError.ToString());return;}QAStage=7;return;
+  Capture(TEXT("06-continue-menu"));
+  TArray<UUserWidget*> Menus;
+  UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this,Menus,UWardrobeMenu::StaticClass(),true);
+  auto* Menu=Menus.IsEmpty()?nullptr:Cast<UWardrobeMenu>(Menus[0]);
+  if(!Menu||!ContinueLatest(Menu->Data)||L->IsLoading()){Finish(false,TEXT("continue in showcase"));return;}
+  const int32 Destination=Menu->Data->Levels.IndexOfByPredicate([this](const auto& Entry){return Entry.Level==Save->Level;});
+  Menu->SelectChoice(Destination);
+  Menu->StartGame();
+  if(!L->IsLoading()){Finish(false,TEXT("start selected checkpoint destination"));return;}
+  QAStage=7;return;
  }
  if(QAStage==7&&Pawn){
   if(Save->NextStoryId!=TEXT("Story03")||Save->PlayerName!=TEXT("演出测试旅人")){Finish(false,TEXT("continue progress/name"));return;}
@@ -426,9 +442,13 @@ void UWardrobeStorySubsystem::AdvanceRuntime(float){
  auto* Loading=GetGameInstance()->GetSubsystem<UWardrobeLoadingSubsystem>();if(Loading&&Loading->IsLoading())return;
  auto* Pawn=UGameplayStatics::GetPlayerPawn(this,0);auto* PC=UGameplayStatics::GetPlayerController(this,0);
  if(bRestorePending){
-  if(!Save||!StoryWorldMatches(World,Save->Level)||!Pawn||!PC)return;
-  if(Save->bHasPlayerTransform){Pawn->SetActorTransform(Save->PlayerTransform,false,nullptr,ETeleportType::TeleportPhysics);PC->SetControlRotation(Save->ControlRotation);}
-  bRestorePending=false;SaveCheckpoint();
+  // The first actual exploration map consumes the checkpoint, even if the player picked a different map.
+  if(!Pawn||!Cast<AWardrobeExplorerController>(PC))return;
+  bRestorePending=false;
+  if(Save&&Save->bHasPlayerTransform&&StoryWorldMatches(World,Save->Level)){
+   Pawn->SetActorTransform(Save->PlayerTransform,false,nullptr,ETeleportType::TeleportPhysics);
+   PC->SetControlRotation(Save->ControlRotation);
+  }
  }
  if(World!=ObservedWorld.Get()){
   ObservedWorld=World;const int32 Index=CurrentStepIndex();if(Index!=INDEX_NONE&&StoryWorldMatches(World,Flow->Steps[Index].Level)){
