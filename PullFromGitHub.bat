@@ -7,6 +7,11 @@ echo   Pull Latest From GitHub - OVERWRITE LOCAL CHANGES
 echo   Repo : UE58ToonShadingDemo
 echo ============================================================
 echo.
+echo   NOTE: This syncs CODE only. Assets (Content\,
+echo   Plugins binaries, AI runtime) are distributed via
+echo   Releases - download and extract the latest pack
+echo   separately. See README.md.
+echo.
 echo   WARNING / Please read before continuing:
 echo.
 echo   1. Every uncommitted local change will be DISCARDED.
@@ -83,24 +88,21 @@ if errorlevel 1 (
 echo   Reset OK.
 echo.
 
-echo [5/6] Downloading LFS assets (may take a while)...
-git lfs install --local >nul 2>&1
-git lfs pull
-if errorlevel 1 (
-    echo.
-    echo   [!] LFS pull reported an error.
-    echo       Assets may be pointer files only. Run this script again.
-    echo.
-)
+echo [5/6] Assets are NOT stored in git anymore.
+echo       Your local Content\ and Plugins\ folders are kept
+echo       (ignored folders are preserved by clean -fd).
+echo       To update assets, download the latest pack from:
+echo       https://github.com/qimiaotianshi/UE58ToonShadingDemo/releases
+echo       and extract it over this project folder.
 echo.
 
 echo [6/6] Removing untracked leftover files...
 rem  -e : keep this script and the sync script even if they are untracked
-git clean -fd -e PullFromGitHub.bat -e SyncToGitHub.bat
+git clean -fd -e PullFromGitHub.bat -e SyncToGitHub.bat -e PackAssets.bat
 echo.
 
 echo ============================================================
-echo   DONE - Local copy now matches origin/main
+echo   DONE - Local CODE now matches origin/main
 echo ============================================================
 echo.
 echo   Latest commit:

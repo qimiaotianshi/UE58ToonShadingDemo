@@ -1,10 +1,17 @@
 @echo off
-title Sync UE Project to GitHub
+title Sync Code to GitHub
 cd /d "%~dp0"
 
 echo ============================================
-echo   UE58ToonShadingDemo - Sync to GitHub
+echo   UE58ToonShadingDemo - Sync CODE to GitHub
 echo ============================================
+echo.
+echo   This syncs TEXT files only:
+echo     source, config, docs, scripts
+echo.
+echo   Assets (Content\, Plugins binaries, AI)
+echo   are NOT synced here. If you changed them,
+echo   run PackAssets.bat and publish a Release.
 echo.
 
 set /p msg="Commit message (Enter for default): "
@@ -28,20 +35,23 @@ if errorlevel 1 (
 )
 echo.
 
-echo [4/4] Pushing to GitHub (large files, please wait)...
+echo [4/4] Pushing to GitHub...
 git push
 echo.
 
 if errorlevel 1 (
     echo ============================================
     echo   [FAILED] Push error
-    echo   Reason : network issue or file too large
+    echo   Reason : network / SSH issue
     echo   Fix    : just run this script again to resume
     echo ============================================
 ) else (
     echo ============================================
-    echo   [OK] Synced to GitHub
+    echo   [OK] Code synced to GitHub
     echo   https://github.com/qimiaotianshi/UE58ToonShadingDemo
+    echo.
+    echo   Reminder: asset changes need PackAssets.bat
+    echo             plus a new Release upload.
     echo ============================================
 )
 
