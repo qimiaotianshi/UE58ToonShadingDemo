@@ -1,3 +1,0 @@
-Source: https://kenney.nl/assets/cursor-pack
-Kenney Cursor Pack 1.1, CC0.
-Based on PNG/Basic/Default/pointer_toon_a.png. Recolored pink, added border and release sparkles. Three PNGs have alpha and share their arrow tip.

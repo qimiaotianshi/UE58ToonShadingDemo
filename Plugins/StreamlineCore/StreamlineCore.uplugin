@@ -1,3 +1,83 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a480552d0ff0e33baa4bfc0ee055613e1966c658f171a8818c09c559eab9c3b7
-size 2002
+{
+  "FileVersion": 3,
+  "Version": 144,
+  "VersionName": "8.9.0-SL2.14.16",
+  "FriendlyName": "NVIDIA Streamline Core (hidden, implementation detail)",
+  "Description": "Please use the specific NVIDIA Streamline feature plugins for DLSS-FG etc",
+  "Category": "Rendering",
+  "CreatedBy": "NVIDIA",
+  "CreatedByURL": "https://developer.nvidia.com/rtx/streamline",
+  "DocsURL": "",
+  "MarketplaceURL": "https://www.unrealengine.com/marketplace/en-US/product/nvidia-dlss",
+  "SupportURL": "mailto:DLSS-Support@nvidia.com",
+  "EngineVersion": "5.8.0",
+  "CanContainContent": false,
+  "Installed": true,
+  "Modules": [
+    {
+      "Name": "StreamlineShaders",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "StreamlineExtension",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit"
+    },
+    {
+      "Name": "StreamlineCore",
+      "Type": "Runtime",
+      "LoadingPhase": "PostEngineInit",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "StreamlineBlueprint",
+      "Type": "Runtime",
+      "LoadingPhase": "PostEngineInit"
+    },
+    {
+      "Name": "StreamlineRHI",
+      "Type": "Runtime",
+      "LoadingPhase": "PostSplashScreen",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "StreamlineDXGIRHI",
+      "Type": "Runtime",
+      "LoadingPhase": "None",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "StreamlineD3D11RHI",
+      "Type": "Runtime",
+      "LoadingPhase": "None",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "StreamlineD3D12RHI",
+      "Type": "Runtime",
+      "LoadingPhase": "None",
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "StreamlineNGXCommon",
+      "Enabled": true
+    }
+  ],
+  "Hidden": true
+}

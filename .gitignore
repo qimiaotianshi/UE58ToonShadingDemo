@@ -35,20 +35,67 @@ Plugins/*/Intermediate/
 # 自动保存的资产
 Saved/Autosaves/
 
-# ===== 本地 AI 运行库（体积过大，禁止入仓）=====
-# SoVITS / PyTorch / ffmpeg 等第三方运行环境，含大量 >100MB 的模型与可执行文件
-# GitHub 单文件上限 100MB，此类内容请通过网盘或 Release 单独分发
-Content/AI/
-**/runtime/Lib/site-packages/
-**/pretrained_models/
-**/GPT_SoVITS/
-**/*.pth
-**/*.pt
-**/*.ckpt
-**/*.pickle
-**/*.pyc
-__pycache__/
-**/TEMP/gradio/
+# ===== 数据与二进制：改由 GitHub Releases 分发，不进 git =====
+# 原因：GitHub 免费 LFS 额度仅 1GB，工程资产约 30GB，无法继续走 git/LFS。
+# 本仓库只保留纯文本（源码、配置、文档、脚本）；
+# 全部资产由 PackAssets.bat 打包后上传到 Releases（含 AI 运行库）。
+# 详见 README.md
 
-# ===== 压缩包（不上传）=====
+# 整个 Content（含 Content/AI 的 SoVITS 运行库）
+Content/
+
+# AI 第三方运行库（AstrBot 源码 + Python 运行环境），体积大且与工程源码无关
+# 注意：Plugins/AI/ 顶层的启动脚本与配置仍走 git
+Plugins/AI/AstrBot/
+Plugins/AI/Runtime/
+
+# 插件内的资源与第三方二进制（保留 Source/ 源码与 *.uplugin）
+Plugins/*/Content/
+Plugins/*/Resources/
+Plugins/*/ThirdParty/
+
+# 打包输出目录（位于仓库外，这里再兜一层）
+Releases/
+
+# ===== 兜底：所有二进制 / 资产 / 压缩包一律不进 git =====
+# 即使将来新增目录，也不会误把大文件提交进去
+*.uasset
+*.umap
+*.dll
+*.lib
+*.so
+*.dylib
+*.pyd
+*.pth
+*.pt
+*.ckpt
+*.pickle
+*.onnx
+*.safetensors
+*.png
+*.jpg
+*.jpeg
+*.tga
+*.gif
+*.bmp
+*.exr
+*.hdr
+*.wav
+*.mp3
+*.ogg
+*.fbx
+*.obj
+*.ttf
+*.otf
+*.exe
+*.pdb
+*.bin
+*.pak
+*.ucas
+*.utoc
+*.pyc
 *.7z
+*.7z.*
+*.zip
+*.rar
+__pycache__/

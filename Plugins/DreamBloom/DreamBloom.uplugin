@@ -1,3 +1,61 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:024eb1d298c004d8d8e0b798459ec0829076bb07d62ade76aa511f030afe3ca4
-size 1238
+{
+  "FileVersion": 3,
+  "Version": 154,
+  "VersionName": "1.54",
+  "FriendlyName": "Wardrobe · 奇境漫游",
+  "Description": "Character showcase, third-person exploration and linear interactive Sequence stories with save slots.",
+  "Category": "UI",
+  "CanContainContent": true,
+  "Modules": [
+    {
+      "Name": "DreamBloom",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "DreamBloomEditor",
+      "Type": "UncookedOnly",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
+    },
+    {
+      "Name": "WindowsMoviePlayer",
+      "Enabled": true,
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "WmfMedia",
+      "Enabled": true,
+      "PlatformAllowList": [
+        "Win64"
+      ]
+    },
+    {
+      "Name": "KawaiiPhysics",
+      "Enabled": true
+    },
+    {
+      "Name": "EnhancedInput",
+      "Enabled": true
+    },
+    {
+      "Name": "StreamingADA",
+      "Enabled": true
+    },
+    {
+      "Name": "MetaHumanCoreTech",
+      "Enabled": true
+    },
+    {
+      "Name": "DaniyaLipSync",
+      "Enabled": true
+    }
+  ]
+}

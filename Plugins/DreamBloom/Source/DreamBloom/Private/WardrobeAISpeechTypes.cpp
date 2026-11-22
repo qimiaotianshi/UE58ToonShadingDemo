@@ -57,12 +57,23 @@ TSharedRef<FJsonObject> BuildChatRequest(const FWardrobeSpeechJob& J){
  User->SetStringField(TEXT("content"),J.PlayerMessage.IsEmpty()?TEXT("这次是你主动开口。优先自然接着刚才的话或已有互动，也可以说一个眼前的小发现；玩家暂时没回应时少追问，不复述你前面的句子。不要把这段自动触发提示当成玩家经历记住。"):J.PlayerMessage);
  Messages.Add(MakeShared<FJsonValueObject>(User));O->SetArrayField(TEXT("messages"),Messages);AddAstrBotMetadata(J,O,J.PlayerMessage.IsEmpty()?TEXT("auto"):TEXT("manual"));return O;
 }
-bool ParseCompanionReply(const FString& JSON,FWardrobeSpeechJob& J,FString& Error){
+bool TryReadAssistantText(const FJsonObject& Envelope,FString& Text){
+ const TArray<TSharedPtr<FJsonValue>>* Choices=nullptr;
+ const TSharedPtr<FJsonObject>* Choice=nullptr;
+ const TSharedPtr<FJsonObject>* Message=nullptr;
+ return Envelope.TryGetArrayField(TEXT("choices"),Choices)&&!Choices->IsEmpty()
+  &&(*Choices)[0]&&(*Choices)[0]->TryGetObject(Choice)&&*Choice
+  &&(*Choice)->TryGetObjectField(TEXT("message"),Message)&&(*Message)->TryGetStringField(TEXT("content"),Text);
+}
+bool ParseCompanionReply(const FString& JSON,FWardrobeSpeechJob& J,FString& Error,FString* RawReply){
  J.Text.Reset();J.VerifiedNotes.Reset();Error.Reset();TSharedPtr<FJsonObject> Envelope;
+ if(RawReply)RawReply->Reset();
  if(JSON.Len()>65536||!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(JSON),Envelope)||!Envelope){Error=TEXT("Invalid dialogue response.");return false;}
+ FString Content;
+ if(!TryReadAssistantText(*Envelope,Content)){Error=TEXT("Dialogue response has no bounded message.");return false;}
+ if(RawReply)*RawReply=Content;
  Envelope->TryGetStringField(TEXT("wardrobe_receipt"),J.AstrBotReceipt);if(J.AstrBotReceipt.Len()>100){Error=TEXT("Invalid companion receipt.");return false;}
- const TArray<TSharedPtr<FJsonValue>>* Choices=nullptr;const TSharedPtr<FJsonObject>* Message=nullptr;FString Content;
- if(!Envelope->TryGetArrayField(TEXT("choices"),Choices)||Choices->IsEmpty()||!(*Choices)[0]->AsObject().IsValid()||!(*Choices)[0]->AsObject()->TryGetObjectField(TEXT("message"),Message)||!(*Message)->TryGetStringField(TEXT("content"),Content)||Content.Len()>4096){Error=TEXT("Dialogue response has no bounded message.");return false;}
+ if(Content.Len()>4096){Error=TEXT("Dialogue response has no bounded message.");return false;}
  TSharedPtr<FJsonObject> Reply;FString Text,Emotion;
  if(Content.TrimStartAndEnd().StartsWith(TEXT("{"))){
   if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Content),Reply)||!Reply||!Reply->TryGetStringField(TEXT("text"),Text)||!Reply->TryGetStringField(TEXT("emotion"),Emotion)||Emotion.Len()>16||Text.Contains(TEXT("【"))||Text.Contains(TEXT("】"))){Error=TEXT("Dialogue JSON has invalid text or emotion.");return false;}

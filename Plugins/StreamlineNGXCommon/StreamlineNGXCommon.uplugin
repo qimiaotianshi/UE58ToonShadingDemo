@@ -1,3 +1,24 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f0af0e0861bb252c7ed8b118e5b14ac05cd197636d8082eeae83f32aa0fb300e
-size 727
+{
+  "FileVersion": 3,
+  "Version": 135,
+  "VersionName": "8.9.0",
+  "FriendlyName": "NVIDIA NGX/Streamline Common",
+  "Description": "Please use the feature specific NVIDIA plugins for DLSS-FG, DLSS etc",
+  "Category": "Rendering",
+  "CreatedBy": "NVIDIA",
+  "CreatedByURL": "https://developer.nvidia.com/rtx/streamline",
+  "DocsURL": "",
+  "MarketplaceURL": "https://www.unrealengine.com/marketplace/en-US/product/nvidia-dlss",
+  "SupportURL": "mailto:DLSS-Support@nvidia.com",
+  "EngineVersion": "5.8.0",
+  "CanContainContent": false,
+  "Installed": true,
+  "Modules": [
+    {
+      "Name": "StreamlineNGXCommon",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Hidden": true
+}

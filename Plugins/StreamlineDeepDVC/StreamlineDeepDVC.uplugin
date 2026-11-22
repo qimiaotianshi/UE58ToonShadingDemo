@@ -1,3 +1,33 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7c9aa261b1d10c622549060a20d7f6873cc6b66586a8eaa0f31e8ff82e081be5
-size 882
+{
+	"FileVersion": 3,
+	"Version": 144,
+	"VersionName": "8.9.0-SL2.14.16",
+	"FriendlyName": "NVIDIA RTX Dynamic Vibrance",
+	"Description": "NVIDIA RTX Dynamic Vibrance enhances visual clarity by dynamically tuning color saturation and contrast.",
+	"Category": "Rendering",
+	"CreatedBy": "NVIDIA",
+	"CreatedByURL": "https://developer.nvidia.com/rtx/streamline",
+	"DocsURL": "",
+	"MarketplaceURL": "https://www.unrealengine.com/marketplace/en-US/product/nvidia-dlss",
+	"SupportURL": "mailto:DLSS-Support@nvidia.com",
+	"EngineVersion": "5.8.0",
+	"CanContainContent": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "StreamlineDeepDVCBlueprint",
+			"Type": "Runtime",
+			"LoadingPhase": "PostEngineInit"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "StreamlineCore",
+			"Enabled": true
+		},
+		{
+			"Name": "StreamlineNGXCommon",
+			"Enabled": true
+		}
+	]
+}

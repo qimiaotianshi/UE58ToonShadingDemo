@@ -1,6 +1,7 @@
 #include "WardrobeAIEvent.h"
 #include "WardrobeAISpeech.h"
 #include "WardrobeAISpeechTypes.h"
+#include "WardrobeAIDialogueLog.h"
 #include "WardrobeAISpeechSubsystem.h"
 #include "WardrobeMenu.h"
 #include "WardrobeStory.h"
@@ -103,6 +104,7 @@ bool UWardrobeAIEventSubsystem::RequestEventNow(){
  State=EWardrobeAIEventState::Fetching;Speech->SetEventReserved(true);const uint64 Ticket=++Generation;
  Deadline=FPlatformTime::Seconds()+4*(Job.Timeout+Job.MaxDuration+30);
  Job.PlanJSON=WardrobeAIEvent::BuildPlanRequest(Job,P->EventBackground.Left(4000),MaxChange);
+ Job.DialogueEventId=EventId;
  Job.OnPlan=[Weak=TWeakObjectPtr<UWardrobeAIEventSubsystem>(this),Ticket](const FString& JSON,const FString& Error){if(auto* E=Weak.Get())E->ReceivePlan(Ticket,JSON,Error);};
  if(!Worker->Start(Job)){FailEvent(TEXT("Speech service is busy."));return false;}
  return true;
@@ -119,6 +121,7 @@ void UWardrobeAIEventSubsystem::PrepareNext(){
  if(!Speech->BuildPreparationJob(Job)){FailEvent(TEXT("Character is unavailable."));return;}
  const auto& Line=PreparedIndex==0?Plan.Opening:Plan.Options[PreparedIndex-1].Reply;
  Job.Text=Line.Text;Job.Emotion=Line.Emotion;Job.ApiKey.Reset();
+ Job.DialogueEventId=EventId;
  Job.AstrBotReceipt=Plan.AstrBotReceipt;
  // Only a selected, fully played response is remembered as conversation.
  Job.bRemember=Job.bRemember&&PreparedIndex>0;
@@ -149,6 +152,7 @@ bool UWardrobeAIEventSubsystem::ChooseOption(int32 Index){
  auto Selected=MoveTemp(Clips[Index+1]);Clips.Empty();
  if(auto* M=Menu.Get())M->PlayUISound(EWardrobeUISound::AIEventOption);
  if(!Speech->PlayPreparedClip(Selected)){FailEvent(TEXT("Could not play prepared reply."));return false;}
+ WardrobeAIDialogueLog::Write(FGuid(),EventId,TEXT("event_clip"),TEXT("choice"),Option.Label);
  Deadline=FPlatformTime::Seconds()+Selected->Duration()+5;
  UE_LOG(LogTemp,Display,TEXT("WARDROBE_AI_EVENT_CHOICE branch=%s mood=%d (cached playback, no request)"),*Option.Id,GetMood());return true;
 }

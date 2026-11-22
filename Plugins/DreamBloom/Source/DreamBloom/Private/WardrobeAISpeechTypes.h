@@ -31,6 +31,7 @@ struct FWardrobeSpeechJob {
  int32 RecentTurnLimit=12,MemoryNoteLimit=24;
  // Native callbacks are GT-only; clips exclusively own heap arrays.
  FString PlanJSON;
+ FString DialogueEventId;
  TFunction<void(const FString&,const FString&)> OnPlan;
  TFunction<void(TSharedPtr<const FWardrobeSpeechClip,ESPMode::ThreadSafe>,const FString&)> OnPrepared;
  int32 MaxCharacters=60;float MaxDuration=15,Timeout=45,ExpressionIntensity=.65f;
@@ -41,7 +42,8 @@ namespace WardrobeAISpeech {
  TSharedRef<FJsonObject> BuildChatRequest(const FWardrobeSpeechJob& Job);
  FString BuildCompanionContext(const FWardrobeSpeechJob& Job);
  void AddAstrBotMetadata(const FWardrobeSpeechJob& Job,TSharedRef<FJsonObject> Object,const FString& Mode);
- bool ParseCompanionReply(const FString& JSON,FWardrobeSpeechJob& Job,FString& Error);
+ bool TryReadAssistantText(const FJsonObject& Envelope,FString& Text);
+ bool ParseCompanionReply(const FString& JSON,FWardrobeSpeechJob& Job,FString& Error,FString* RawReply=nullptr);
  bool DecodeWave(const TArray<uint8>& Bytes,float MaxDuration,TArray<int16>& Mono,int32& Rate,FString& Error);
  bool CleanDialogue(const FString& Raw,int32 MaxCharacters,const TArray<FWardrobeSpeechEmotion>& Presets,FString& Text,FName& Emotion,FString& Error);
  bool ParseDialogue(const FString& JSON,int32 MaxCharacters,FString& Text,FString& Error,const TArray<FWardrobeSpeechEmotion>* Presets=nullptr,FName* Emotion=nullptr);

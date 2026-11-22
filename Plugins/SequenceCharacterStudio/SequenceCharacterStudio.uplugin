@@ -1,3 +1,31 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:351fd4e1ec64af2956dff3ec31a95a8bfaff9e0792e32e4814308d977ed65fc0
-size 756
+{
+  "FileVersion": 3,
+  "Version": 120,
+  "VersionName": "1.2",
+  "FriendlyName": "Sequence Character Studio",
+  "Description": "Author BlendShape expressions in Sequencer and import animation expression curves. Use official Control Rig for skeletal animation.",
+  "Category": "Animation",
+  "CanContainContent": true,
+  "Modules": [
+    {
+      "Name": "SequenceCharacterStudio",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "SequenceCharacterStudioEditor",
+      "Type": "Editor",
+      "LoadingPhase": "PostEngineInit"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "ControlRig",
+      "Enabled": true
+    },
+    {
+      "Name": "LevelSequenceEditor",
+      "Enabled": true
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 #include "WardrobeAISpeechTypes.h"
 #include "WardrobeAISpeechPaths.h"
 #include "WardrobeAIServiceLifecycle.h"
+#include "WardrobeAIDialogueLog.h"
 #include "Async/Async.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
@@ -28,6 +29,8 @@ struct FWardrobeSpeechWorker {
 };
 struct FWardrobeSpeechRequest {
  FWardrobeSpeechJob Job;
+ FGuid DialogueLogId;
+ FString DialogueLogApiKey;
  TAtomic<bool> Cancelled{false};
  FHttpRequestPtr HTTP;
  TArray<uint8> Body;FString Plan;int32 Limit=0;bool bOverflow=false;
@@ -253,6 +256,7 @@ bool UWardrobeAISpeechSubsystem::Start(const FWardrobeSpeechJob& Input){
  check(IsInGameThread());if(bEnding||Active||bPrewarming)return false;
  if(auto* Owner=Input.Owner.Get())ConfigureService(const_cast<UWardrobeAISpeechData*>(Owner->GetProfile()));
  auto R=MakeShared<FWardrobeSpeechRequest,ESPMode::ThreadSafe>();R->Job=Input;
+ if(WardrobeAIDialogueLog::IsEnabled())R->DialogueLogId=FGuid::NewGuid();
  if(!R->Job.ReferenceAudio.IsEmpty()&&FPaths::IsRelative(R->Job.ReferenceAudio))if(auto P=IPluginManager::Get().FindPlugin(TEXT("DreamBloom")))R->Job.ReferenceAudio=FPaths::ConvertRelativePathToFull(FPaths::Combine(P->GetBaseDir(),R->Job.ReferenceAudio));
  Active=R;
  if(!Input.PlanJSON.IsEmpty()){
@@ -272,7 +276,7 @@ void UWardrobeAISpeechSubsystem::Cancel(UWardrobeAISpeechComponent* Owner){
  if(Active&&Active->Job.Owner.Get()==Owner){Active->Cancelled.Store(true);if(Active->HTTP)Active->HTTP->CancelRequest();}
 }
 void UWardrobeAISpeechSubsystem::Finish(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R,const FString& Error){
- check(IsInGameThread());R->HTTP.Reset();R->Body.Empty();R->Job.ApiKey.Reset();
+ check(IsInGameThread());R->HTTP.Reset();R->Body.Empty();R->Job.ApiKey.Reset();R->DialogueLogApiKey.Reset();
  if(Active==R)Active.Reset();
  if(bEnding||R->Cancelled.Load())return;
  if(R->Job.OnPlan){auto Done=MoveTemp(R->Job.OnPlan);Done(R->Plan,Error);return;}
@@ -281,18 +285,51 @@ void UWardrobeAISpeechSubsystem::Finish(TSharedRef<FWardrobeSpeechRequest,ESPMod
 }
 void UWardrobeAISpeechSubsystem::RequestText(TSharedRef<FWardrobeSpeechRequest,ESPMode::ThreadSafe> R){
  FString Authorization,AuthorizationError;if(!WardrobeAISpeech::BuildChatAuthorization(R->Job.ApiKey,Authorization,AuthorizationError)){Finish(R,AuthorizationError);return;}
- const auto O=WardrobeAISpeech::BuildChatRequest(R->Job);
- auto H=MakeHTTP(R,R->Job.Endpoint,R->Job.PlanJSON.IsEmpty()?Encode(O):R->Job.PlanJSON,64*1024);H->SetHeader(TEXT("Authorization"),Authorization);R->Job.ApiKey.Reset();
- H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),R](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
+ const bool IsEvent=!R->Job.PlanJSON.IsEmpty();
+ const TCHAR* Kind=IsEvent?TEXT("event_plan"):R->Job.PlayerMessage.IsEmpty()?TEXT("automatic"):TEXT("manual");
+ const bool UsesAstrBot=!R->Job.AstrBotSession.IsEmpty();
+ const TCHAR* Peer=UsesAstrBot?TEXT("astrbot"):TEXT("provider");
+ TSharedPtr<FJsonObject> ChatRequest;
+ if(!IsEvent)ChatRequest=WardrobeAISpeech::BuildChatRequest(R->Job);
+ const FString RequestBody=IsEvent?R->Job.PlanJSON:Encode(ChatRequest.ToSharedRef());
+ if(R->DialogueLogId.IsValid()&&WardrobeAIDialogueLog::IsEnabled()){
+  R->DialogueLogApiKey=Authorization.Mid(7);
+  if(IsEvent)FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(RequestBody),ChatRequest);
+  if(ChatRequest){
+   const FString User=WardrobeAIDialogueLog::ReadUserText(*ChatRequest).Replace(*R->DialogueLogApiKey,TEXT("[redacted]"),ESearchCase::CaseSensitive);
+   WardrobeAIDialogueLog::Write(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("request"),User);
+  }
+  WardrobeAIDialogueLog::WriteExchange(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("ue_request"),Peer,RequestBody,R->DialogueLogApiKey);
+ }
+ auto H=MakeHTTP(R,R->Job.Endpoint,RequestBody,64*1024);H->SetHeader(TEXT("Authorization"),Authorization);R->Job.ApiKey.Reset();
+ if(UsesAstrBot&&!R->DialogueLogApiKey.IsEmpty()){
+  H->SetHeader(TEXT("X-Wardrobe-Dialogue-Log"),R->DialogueLogId.ToString(EGuidFormats::Digits));
+  if(!R->Job.DialogueEventId.IsEmpty())H->SetHeader(TEXT("X-Wardrobe-Dialogue-Event"),R->Job.DialogueEventId);
+ }
+ H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),R,Kind,Peer](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
   auto* S=Weak.Get();if(!S||S->bEnding){R->HTTP.Reset();return;}
   if(R->Cancelled.Load()){S->Finish(R,TEXT(""));return;}
+  const bool CaptureReply=!R->DialogueLogApiKey.IsEmpty()&&WardrobeAIDialogueLog::IsEnabled();
+  const FString ReplyBody=R->Body.IsEmpty()?FString():UTF8(R->Body);
+  if(CaptureReply){
+   WardrobeAIDialogueLog::WriteExchange(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("ue_response"),Peer,ReplyBody,
+    R->DialogueLogApiKey,Response?Response->GetResponseCode():0,!OK||R->bOverflow);
+  }
   if(!OK||!Response||Response->GetResponseCode()!=200||R->bOverflow){S->Finish(R,TEXT("Chat request failed, timed out, or exceeded the response limit."));return;}
   if(R->Job.OnPlan){
-   TSharedPtr<FJsonObject> Envelope;const TArray<TSharedPtr<FJsonValue>>* Choices=nullptr;const TSharedPtr<FJsonObject>* Message=nullptr;
-   if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(UTF8(R->Body)),Envelope)||!Envelope||!Envelope->TryGetArrayField(TEXT("choices"),Choices)||Choices->IsEmpty()||!(*Choices)[0]->AsObject()||!(*Choices)[0]->AsObject()->TryGetObjectField(TEXT("message"),Message)||!(*Message)->TryGetStringField(TEXT("content"),R->Plan)||R->Plan.Len()>8000){S->Finish(R,TEXT("Invalid event plan response."));return;}
+   TSharedPtr<FJsonObject> Envelope;
+   if(!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(ReplyBody),Envelope)||!Envelope
+    ||!WardrobeAISpeech::TryReadAssistantText(*Envelope,R->Plan)){S->Finish(R,TEXT("Invalid event plan response."));return;}
+   if(CaptureReply)WardrobeAIDialogueLog::Write(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("reply"),
+    R->Plan.Replace(*R->DialogueLogApiKey,TEXT("[redacted]"),ESearchCase::CaseSensitive));
+   if(R->Plan.Len()>8000){S->Finish(R,TEXT("Invalid event plan response."));return;}
    S->Finish(R,TEXT(""));return;
   }
-  FString Error;if(!WardrobeAISpeech::ParseCompanionReply(UTF8(R->Body),R->Job,Error)){S->Finish(R,Error);return;}
+  FString Error,RawReply;
+  const bool Parsed=WardrobeAISpeech::ParseCompanionReply(ReplyBody,R->Job,Error,CaptureReply?&RawReply:nullptr);
+  if(CaptureReply&&!RawReply.IsEmpty())WardrobeAIDialogueLog::Write(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("reply"),
+   RawReply.Replace(*R->DialogueLogApiKey,TEXT("[redacted]"),ESearchCase::CaseSensitive));
+  if(!Parsed){S->Finish(R,Error);return;}
   R->HTTP.Reset();R->Body.Empty();S->RequestVoice(R);
  });if(!H->ProcessRequest())Finish(R,TEXT("Could not submit the chat request."));
 }
@@ -303,6 +340,13 @@ void UWardrobeAISpeechSubsystem::RequestVoice(TSharedRef<FWardrobeSpeechRequest,
  const auto O=WardrobeAISpeech::BuildVoiceRequest(R->Job);
  if(O->GetStringField(TEXT("text")).IsEmpty()){Finish(R,TEXT("No spoken text remains after emotion tags are removed."));return;}
  R->Job.Text=O->GetStringField(TEXT("text")); // Captions and solved clips use the same clean line as TTS.
+ if(R->DialogueLogId.IsValid()){
+  const TCHAR* Kind=!R->Job.DialogueEventId.IsEmpty()?TEXT("event_clip"):R->Job.PlayerMessage.IsEmpty()?TEXT("automatic"):TEXT("manual");
+  const FString Spoken=R->DialogueLogApiKey.IsEmpty()?R->Job.Text:
+   R->Job.Text.Replace(*R->DialogueLogApiKey,TEXT("[redacted]"),ESearchCase::CaseSensitive);
+  WardrobeAIDialogueLog::Write(R->DialogueLogId,R->Job.DialogueEventId,Kind,TEXT("tts"),Spoken,R->Job.Emotion);
+ }
+ R->DialogueLogApiKey.Reset();
  auto H=MakeHTTP(R,R->Job.TTSEndpoint,Encode(O),24*1024*1024);
  H->OnProcessRequestComplete().BindLambda([Weak=TWeakObjectPtr<UWardrobeAISpeechSubsystem>(this),R](FHttpRequestPtr,FHttpResponsePtr Response,bool OK){
   auto* S=Weak.Get();if(!S||S->bEnding){R->HTTP.Reset();return;}

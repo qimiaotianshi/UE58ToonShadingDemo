@@ -1,34 +1,19 @@
-# ===== Git LFS 追踪规则（UE 工程）=====
-# 所有 UE 资产走 LFS，避免超出 GitHub 100MB 单文件上限
-*.uasset filter=lfs diff=lfs merge=lfs -text
-*.umap   filter=lfs diff=lfs merge=lfs -text
+# ===== 本仓库不再使用 Git LFS =====
+# 资产数据（Content/、Plugins 二进制、AI 运行库）改由 GitHub Releases 分发，
+# 见 PackAssets.bat 与 README.md。仓库只保留纯文本源码与配置。
+#
+# 注意：历史提交中曾使用 LFS，那些旧版本里的资产是指针文本。
+# 使用 `git clone --depth 1` 浅克隆即可避开历史、无需安装 Git LFS。
 
-# 常见二进制资源
-*.png  filter=lfs diff=lfs merge=lfs -text
-*.jpg  filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.tga  filter=lfs diff=lfs merge=lfs -text
-*.gif  filter=lfs diff=lfs merge=lfs -text
-*.bmp  filter=lfs diff=lfs merge=lfs -text
-*.exr  filter=lfs diff=lfs merge=lfs -text
-*.hdr  filter=lfs diff=lfs merge=lfs -text
-*.wav  filter=lfs diff=lfs merge=lfs -text
-*.mp3  filter=lfs diff=lfs merge=lfs -text
-*.ogg  filter=lfs diff=lfs merge=lfs -text
-*.fbx  filter=lfs diff=lfs merge=lfs -text
-*.obj  filter=lfs diff=lfs merge=lfs -text
-*.ttf  filter=lfs diff=lfs merge=lfs -text
-*.otf  filter=lfs diff=lfs merge=lfs -text
-*.uplugin filter=lfs diff=lfs merge=lfs -text
-*.dll  filter=lfs diff=lfs merge=lfs -text
-*.lib  filter=lfs diff=lfs merge=lfs -text
-*.so   filter=lfs diff=lfs merge=lfs -text
-*.dylib filter=lfs diff=lfs merge=lfs -text
-
-# 源码保持文本模式
+# 源码与文本：统一换行符
 *.cpp  text
 *.h    text
 *.cs   text
 *.ini  text
-*.uproject text
+*.py   text
 *.md   text
+*.bat  text
+*.uplugin text
+*.uproject text
+.gitignore text
+.gitattributes text
